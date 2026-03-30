@@ -1,0 +1,261 @@
+.profile-page {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 2.5rem 2rem 3rem;
+}
+
+/* Instagram-style header */
+.profile-header {
+  display: flex;
+  gap: 4rem;
+  align-items: flex-start;
+  margin-bottom: 2.5rem;
+  padding-bottom: 2.5rem;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.profile-left { flex-shrink: 0; }
+
+.profile-avatar-img {
+  width: 130px;
+  height: 130px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--border);
+  box-shadow: 0 0 0 3px var(--bg), 0 0 0 5px var(--accent);
+}
+
+.profile-avatar-placeholder {
+  width: 130px;
+  height: 130px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), var(--like));
+  color: #fff;
+  font-size: 3rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 0 3px var(--bg), 0 0 0 5px var(--accent);
+}
+
+.profile-right {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  padding-top: 0.5rem;
+}
+
+.profile-top-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.profile-username {
+  font-size: 1.35rem;
+  font-weight: 400;
+  color: var(--text);
+  letter-spacing: -0.01em;
+}
+
+.edit-profile-btn {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 0.38rem 1rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.875rem;
+  font-weight: 600;
+  font-family: var(--font);
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.edit-profile-btn:hover {
+  background: var(--bg-card);
+  border-color: var(--accent);
+}
+
+.follow-btn {
+  background: var(--accent);
+  color: var(--accent-text);
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 0.38rem 1.2rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  font-family: var(--font);
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.follow-btn:hover { opacity: 0.85; }
+
+.follow-btn.following {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+.follow-btn.following:hover { border-color: #f87171; color: #f87171; }
+
+/* Stats row — Instagram style: horizontal, spaced */
+.profile-stats {
+  display: flex;
+  gap: 2.5rem;
+}
+
+.stat {
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+}
+
+.stat strong {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.stat span {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
+.profile-bio {
+  font-size: 0.9rem;
+  color: var(--text);
+  line-height: 1.6;
+  max-width: 440px;
+}
+
+.profile-skills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.skill-tag {
+  background: var(--bg-elevated);
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 500;
+  padding: 0.22rem 0.65rem;
+  border-radius: 20px;
+  border: 1px solid var(--border-soft);
+}
+
+/* Vibe Score */
+.vibe-score {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.vibe-label {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.vibe-bar-track {
+  width: 160px;
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.vibe-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--like));
+  border-radius: 2px;
+  transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.vibe-number {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--accent);
+  min-width: 24px;
+}
+
+/* Projects section */
+.profile-projects-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2rem;
+  margin-bottom: 1.5rem;
+  border-top: 1px solid var(--border-soft);
+  padding-top: 0;
+}
+
+.projects-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 0.9rem 0;
+  border-top: 1px solid var(--text);
+  margin-top: -1px;
+  cursor: pointer;
+}
+
+.layout-toggle {
+  display: flex;
+  gap: 0.25rem;
+  margin-left: auto;
+}
+
+.layout-toggle button {
+  background: none;
+  border: none;
+  color: var(--text-faint);
+  padding: 0.3rem 0.5rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 1rem;
+  transition: color 0.15s;
+}
+
+.layout-toggle button.active { color: var(--text); }
+
+.profile-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 3px;
+}
+
+/* Instagram-style tight grid for profile */
+.profile-grid .project-card {
+  border-radius: 0;
+  border: none;
+  border-bottom: 1px solid var(--border-soft);
+  border-right: 1px solid var(--border-soft);
+}
+
+.profile-grid .project-card:hover {
+  transform: none;
+  box-shadow: none;
+  background: var(--bg-elevated);
+}
+
+.profile-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+@media (max-width: 768px) {
+  .profile-header { flex-direction: column; gap: 1.5rem; }
+  .profile-avatar-img,
+  .profile-avatar-placeholder { width: 86px; height: 86px; font-size: 2rem; }
+  .profile-grid { grid-template-columns: repeat(2, 1fr); }
+}
