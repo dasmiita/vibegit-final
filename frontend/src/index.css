@@ -128,3 +128,46 @@ body {
 
 .clickable-tag { cursor: pointer; }
 .clickable-tag:hover { opacity: 0.7; }
+
+/* ── Global Chat FAB ── */
+.chat-fab {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  width: 56px;
+  height: 56px;
+  border-radius: 18px;
+  background: var(--accent);
+  color: var(--accent-text);
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 32px var(--accent-dim), 0 0 0 1px rgba(255,255,255,0.1) inset;
+  z-index: 1000;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.chat-fab svg {
+  width: 26px;
+  height: 26px;
+}
+
+.chat-fab:hover {
+  transform: translateY(-4px) scale(1.05);
+  box-shadow: 0 12px 40px var(--accent-dim), 0 0 0 1px rgba(255,255,255,0.2) inset;
+}
+
+.chat-fab:active {
+  transform: translateY(0) scale(0.95);
+}
+
+@media (max-width: 768px) {
+  .chat-fab {
+    bottom: 1.5rem;
+    right: 1.5rem;
+    width: 48px;
+    height: 48px;
+  }
+}

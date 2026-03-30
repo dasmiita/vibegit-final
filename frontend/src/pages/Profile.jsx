@@ -4,6 +4,7 @@ import api from "../api/axios";
 import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
 import ProjectCard from "../components/ProjectCard";
+import Avatar from "../components/Avatar";
 import "./Profile.css";
 
 const AVATAR_BASE = "http://localhost:5000/uploads/";
@@ -22,8 +23,16 @@ export default function Profile({ openChat }) {
   const [following, setFollowing] = useState(false);
   const [followerCount, setFollowerCount] = useState(0);
   const [localLayout, setLocalLayout] = useState(layout);
+  const [activeTab, setActiveTab] = useState("projects"); // "projects" or "drafts"
+  const [draft, setDraft] = useState(null);
 
   useEffect(() => {
+    // Check for draft if it's own profile
+    if (user && user.id === id) {
+      const saved = localStorage.getItem("vibe:project_draft");
+      if (saved) setDraft(JSON.parse(saved));
+    }
+    
     Promise.all([
       api.get(`/users/${id}`),
       api.get(`/users/${id}/projects`)
@@ -56,11 +65,7 @@ export default function Profile({ openChat }) {
       {/* Instagram-style header */}
       <div className="profile-header">
         <div className="profile-left">
-          {profile.avatar ? (
-            <img src={`${AVATAR_BASE}${profile.avatar}`} alt="avatar" className="profile-avatar-img" />
-          ) : (
-            <div className="profile-avatar-placeholder">{profile.username[0].toUpperCase()}</div>
-          )}
+          <Avatar user={profile} size={140} />
         </div>
 
         <div className="profile-right">
@@ -74,11 +79,13 @@ export default function Profile({ openChat }) {
                   {following ? "Following" : "Follow"}
                 </button>
                 <button 
-                  className="follow-btn"
-                  style={{ background: "var(--bg-secondary, #f1f5f9)", color: "var(--text)", border: "1px solid var(--border-soft)" }}
+                  className="msg-profile-btn"
                   onClick={() => window.dispatchEvent(new CustomEvent("vibe:open-chat", { detail: { userId: id, user: profile } }))}
                 >
-                  💬 Message
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: "16px", height: "16px" }}>
+                    <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+                  </svg>
+                  Message
                 </button>
               </div>
             )}
@@ -99,7 +106,12 @@ export default function Profile({ openChat }) {
           )}
 
           <div className="vibe-score">
-            <span className="vibe-label">⚡ Vibe Score</span>
+            <span className="vibe-label">
+              <svg viewBox="0 0 24 24" fill="currentColor" stroke="none" style={{ width: 14, height: 14 }}>
+                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+              </svg>
+              Vibe Score
+            </span>
             <div className="vibe-bar-track">
               <div className="vibe-bar-fill" style={{ width: `${score}%` }} />
             </div>
@@ -110,20 +122,72 @@ export default function Profile({ openChat }) {
 
       {/* Layout toggle + grid */}
       <div className="profile-projects-header">
-        <span className="projects-label">Projects</span>
+        <div className="profile-tabs">
+          <button 
+            className={`tab-btn ${activeTab === "projects" ? "active" : ""}`} 
+            onClick={() => setActiveTab("projects")}
+          >
+            Projects
+          </button>
+          {isOwnProfile && (
+            <button 
+              className={`tab-btn ${activeTab === "drafts" ? "active" : ""}`} 
+              onClick={() => setActiveTab("drafts")}
+            >
+              Drafts {draft && <span className="draft-dot" />}
+            </button>
+          )}
+        </div>
         <div className="layout-toggle">
-          <button className={localLayout === "grid" ? "active" : ""} onClick={() => setLocalLayout("grid")}>⊞</button>
-          <button className={localLayout === "list" ? "active" : ""} onClick={() => setLocalLayout("list")}>☰</button>
+          <button className={localLayout === "grid" ? "active" : ""} onClick={() => setLocalLayout("grid")} title="Grid View">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 16, height: 16 }}>
+              <rect x="3" y="3" width="7" height="7" />
+              <rect x="14" y="3" width="7" height="7" />
+              <rect x="14" y="14" width="7" height="7" />
+              <rect x="3" y="14" width="7" height="7" />
+            </svg>
+          </button>
+          <button className={localLayout === "list" ? "active" : ""} onClick={() => setLocalLayout("list")} title="List View">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 16, height: 16 }}>
+              <line x1="8" y1="6" x2="21" y2="6" />
+              <line x1="8" y1="12" x2="21" y2="12" />
+              <line x1="8" y1="18" x2="21" y2="18" />
+              <line x1="3" y1="6" x2="3.01" y2="6" />
+              <line x1="3" y1="12" x2="3.01" y2="12" />
+              <line x1="3" y1="18" x2="3.01" y2="18" />
+            </svg>
+          </button>
         </div>
       </div>
 
-      {projects.length === 0 ? (
-        <p className="empty">No projects yet.</p>
+      {activeTab === "projects" ? (
+        projects.length === 0 ? (
+          <p className="empty">No projects yet.</p>
+        ) : (
+          <div className={localLayout === "grid" ? "profile-grid" : "profile-list"}>
+            {projects.map(p => (
+              <ProjectCard key={p._id} project={p} tile={localLayout === "grid"} onDelete={handleDelete} />
+            ))}
+          </div>
+        )
       ) : (
-        <div className={localLayout === "grid" ? "profile-grid" : "profile-list"}>
-          {projects.map(p => (
-            <ProjectCard key={p._id} project={p} tile={localLayout === "grid"} onDelete={handleDelete} />
-          ))}
+        /* Drafts View */
+        <div className="drafts-view">
+          {!draft ? (
+            <p className="empty">No saved drafts.</p>
+          ) : (
+            <div className="draft-card">
+              <div className="draft-info">
+                <h3>{draft.form?.title || "Untitled Project"}</h3>
+                <p>{draft.form?.description || "No description provided."}</p>
+                <div className="draft-meta">
+                  {draft.domain && <span className="tag">#{draft.domain}</span>}
+                  <span className="draft-date">Last edited locally</span>
+                </div>
+              </div>
+              <Link to="/create" className="edit-draft-btn">Continue Editing</Link>
+            </div>
+          )}
         </div>
       )}
     </div>

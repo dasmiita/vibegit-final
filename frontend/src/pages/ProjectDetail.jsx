@@ -3,6 +3,8 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import api from "../api/axios";
 import { useAuth } from "../context/AuthContext";
 import Toast, { useToast } from "../components/Toast";
+import Avatar from "../components/Avatar";
+import CollaborationHub from "../components/CollaborationHub";
 import "./ProjectDetail.css";
 
 const BASE = "http://localhost:5000/uploads/";
@@ -19,11 +21,8 @@ function getExt(name) { return name.split(".").pop().toLowerCase(); }
 function isImage(name) { return IMAGE_EXTS.includes(getExt(name)); }
 function isCode(name)  { return CODE_EXTS.includes(getExt(name)); }
 
-function Avatar({ user, size = 32 }) {
-  const url = user?.avatar ? `${BASE}${user.avatar}` : null;
-  const letter = (user?.username || "?")[0].toUpperCase();
-  if (url) return <img src={url} alt="" className="sr-avatar-img" style={{ width: size, height: size }} />;
-  return <div className="sr-avatar-placeholder" style={{ width: size, height: size, fontSize: size * 0.38 }}>{letter}</div>;
+function AvatarWrapper({ user, size = 32 }) {
+  return <Avatar user={user} size={size} />;
 }
 
 function FileViewer({ file }) {
@@ -158,9 +157,14 @@ export default function ProjectDetail() {
 
   const handleLike = async () => {
     if (!user) return navigate("/login");
-    const res = await api.post(`/projects/${id}/like`);
-    setLikes(res.data.likes);
-    setLiked(res.data.liked);
+    try {
+      const res = await api.post(`/projects/${id}/like`);
+      setLikes(res.data.likes);
+      setLiked(res.data.liked);
+      showToast(res.data.liked ? "Project Upvoted!" : "Upvote Removed", "success", "Success");
+    } catch (err) {
+      showToast(err.response?.data?.message || "Failed to upvote", "error", "Error");
+    }
   };
 
   const handleFollowAuthor = async () => {
@@ -270,12 +274,27 @@ export default function ProjectDetail() {
     }
   };
 
+  const handleTogglePublicRemix = async () => {
+    try {
+      const res = await api.post(`/projects/${id}/toggle-public-remix`);
+      setProject(prev => ({ ...prev, isPublicRemix: res.data.isPublicRemix }));
+      showToast(res.data.message, "success", "Setting Updated");
+    } catch (err) {
+      showToast("Could not update setting", "error", "Error");
+    }
+  };
+
   const handleComment = async (e) => {
     e.preventDefault();
     if (!comment.trim()) return;
-    const res = await api.post(`/projects/${id}/comments`, { text: comment });
-    setProject(prev => ({ ...prev, comments: res.data }));
-    setComment("");
+    try {
+      const res = await api.post(`/projects/${id}/comments`, { text: comment });
+      setProject(prev => ({ ...prev, comments: res.data }));
+      setComment("");
+      showToast("Comment posted!", "success", "Success");
+    } catch (err) {
+      showToast(err.response?.data?.message || "Failed to post comment", "error", "Error");
+    }
   };
 
   const handleLikeComment = async (commentId) => {
@@ -296,15 +315,17 @@ export default function ProjectDetail() {
     setProject(prev => ({ ...prev, comments: prev.comments.filter(c => c._id !== commentId) }));
   };
 
-  if (loading) return <p className="loading">Loading project...</p>;
+  const handleDownload = () => {
+    window.open(`${api.defaults.baseURL}/projects/${id}/download`);
+  };
+
+  if (loading) return <div className="loading">Loading project...</div>;
   if (!project) return <p className="loading">Project not found.</p>;
 
   const username  = project.userId?.username || "unknown";
   const userId    = project.userId?._id || project.userId;
-  const avatarUrl = project.userId?.avatar ? `${BASE}${project.userId.avatar}` : null;
   const badge     = STATUS_BADGE[project.status] || STATUS_BADGE["idea"];
   const isRemix   = !!project.remixedFrom;
-  const originalOwnerUsername = project.remixedFrom?.userId?.username;
 
   const isAllowedRemixer = project.allowedRemixers?.some(u => (u._id || u).toString() === user?.id);
   const hasRequestedAccess = project.remixAccessRequests?.some(r => (r.userId?._id || r.userId).toString() === user?.id && r.status === "pending");
@@ -317,10 +338,7 @@ export default function ProjectDetail() {
         {/* Header */}
         <div className="detail-header">
           <div className="detail-author">
-            {avatarUrl
-              ? <img src={avatarUrl} alt="avatar" className="detail-avatar" />
-              : <div className="detail-avatar-placeholder">{username[0].toUpperCase()}</div>
-            }
+            <Avatar user={project.userId} size={50} className="detail-avatar-main" />
             <div className="detail-author-meta">
               <div className="detail-author-top">
                 <Link to={`/profile/${userId}`} className="detail-username">@{username}</Link>
@@ -339,14 +357,26 @@ export default function ProjectDetail() {
           </div>
 
           <div className="detail-actions">
-            <span className={`status-badge ${badge.cls}`}>{badge.icon} {badge.label}</span>
-            <button className={`like-btn-lg ${liked ? "liked" : ""}`} onClick={handleLike}>⬆ Upvote {likes}</button>
+            <button className="action-btn-p" onClick={handleDownload} title="Download Project as ZIP">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              <span>Download ZIP</span>
+            </button>
+            <button className={`action-btn-p upvote-btn ${liked ? "active" : ""}`} onClick={handleLike} title="Upvote this project">
+              <svg viewBox="0 0 24 24" fill={liked ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" />
+              </svg>
+              <span>Upvote {likes}</span>
+            </button>
 
             {isOwner && (
-              <>
-                <button className="edit-project-btn" onClick={() => navigate(`/projects/${id}/edit`)}>✏️ Edit</button>
-                <button className="edit-project-btn" onClick={() => navigate(`/projects/${id}/ide`)} style={{ marginLeft: "0.5rem", background: "var(--accent-dim)", color: "var(--accent)" }}>💻 Web IDE</button>
-              </>
+              <div className="owner-controls">
+                <button className="action-btn-outline" onClick={() => navigate(`/projects/${id}/edit`)}>✏️ Edit</button>
+                <button className="action-btn-accent" onClick={() => navigate(`/projects/${id}/ide`)}>💻 Web IDE</button>
+              </div>
             )}
 
             {/* Sync button — shown to non-owner who follows creator */}
@@ -382,10 +412,10 @@ export default function ProjectDetail() {
               </button>
             )}
 
-            {/* Branch / Request Access — shown to all logged-in users except owner (owner already has Branch above) */}
+            {/* Branch / Request Access — shown to all logged-in users except owner */}
             {user && !isOwner && (
               <div className="action-wrapper" style={{ display: 'inline-block' }}>
-                {isAllowedRemixer ? (
+                {(project.isPublicRemix || isAllowedRemixer) ? (
                   <button 
                     className="remix-btn" 
                     onClick={handleRemix} 
@@ -400,11 +430,15 @@ export default function ProjectDetail() {
                   </button>
                 ) : (
                   <button 
-                    className="remix-btn" 
+                    className="remix-btn pr-btn" 
                     onClick={handleRequestAccess}
                     title="Ask the creator for permission to branch this project"
                   >
-                    🔒 Request Remix Access
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 16, height: 16 }}>
+                      <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                    </svg>
+                    Request Access
                   </button>
                 )}
               </div>
@@ -412,12 +446,39 @@ export default function ProjectDetail() {
           </div>
         </div>
 
+        {/* Collaboration Hub Terminal */}
+        <CollaborationHub 
+          project={project}
+          user={user}
+          onPull={handlePullUpdates}
+          onPush={handlePushToOriginal}
+          isOwner={isOwner}
+          syncSending={syncSending}
+          syncRequestSent={syncRequestSent}
+        />
+
         {/* ── Access Control Panel ── */}
         {showAccessPanel && isOwner && (
           <div className="sync-panel">
             <div className="sync-panel-header">
               <span className="sync-panel-title">Project Access Control</span>
               <button className="sync-panel-close" onClick={() => setShowAccessPanel(false)}>✕</button>
+            </div>
+
+            <div className="access-section" style={{ borderBottom: "1px solid rgba(255,255,255,0.05)", paddingBottom: "1rem", marginBottom: "1rem" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <h4 style={{ margin: 0, fontSize: "0.85rem", color: "var(--text)" }}>Public Branching</h4>
+                  <p style={{ margin: "2px 0 0 0", fontSize: "0.75rem", opacity: 0.6 }}>Allow anyone to branch this project without approval</p>
+                </div>
+                <button 
+                  className={`sr-approve-btn ${project.isPublicRemix ? "" : "decline"}`} 
+                  onClick={handleTogglePublicRemix}
+                  style={{ width: "80px", fontSize: "0.7rem", padding: "6px" }}
+                >
+                  {project.isPublicRemix ? "Enabled" : "Disabled"}
+                </button>
+              </div>
             </div>
             
             <div className="access-section">
@@ -428,10 +489,15 @@ export default function ProjectDetail() {
                 <div className="sync-request-list">
                   {project.remixAccessRequests?.filter(r => r.status === "pending").map(req => (
                     <div key={req._id} className="sync-request-item">
-                      <Avatar user={req.userId} size={32} />
-                      <span className="sync-request-text">
-                        <strong>@{req.userId?.username || "unknown"}</strong> wants to remix this project
-                      </span>
+                      <AvatarWrapper user={req.userId} size={32} />
+                      <div className="sync-info">
+                        <p className="sync-text">
+                          <Link to={`/profile/${req.userId?._id}`} className="sync-user">
+                            @{req.userId?.username}
+                          </Link>
+                          {" "}is requesting access to remix
+                        </p>
+                      </div>
                       <div className="sync-request-actions">
                         <button className="sr-approve-btn" onClick={() => handleRespondAccess(req._id, "approve")}>✓ Approve</button>
                         <button className="sr-decline-btn" onClick={() => handleRespondAccess(req._id, "decline")}>✕ Decline</button>
@@ -450,7 +516,7 @@ export default function ProjectDetail() {
                 <div className="sync-request-list">
                   {project.allowedRemixers?.map(userObj => (
                     <div key={userObj._id} className="sync-request-item">
-                      <Avatar user={userObj} size={32} />
+                      <AvatarWrapper user={userObj} size={32} />
                       <span className="sync-request-text">
                         <strong>@{userObj.username || "unknown"}</strong>
                       </span>
@@ -500,10 +566,15 @@ export default function ProjectDetail() {
                   <div className="sync-request-list">
                     {syncRequests.map(req => (
                       <div key={req._id} className="sync-request-item">
-                        <Avatar user={req.requestedBy} size={32} />
-                        <span className="sync-request-text">
-                          <strong>@{req.requestedBy?.username || "unknown"}</strong> wants to sync their changes into your project
-                        </span>
+                        <AvatarWrapper user={req.requestedBy} size={32} />
+                        <div className="sync-info">
+                          <p className="sync-text">
+                            <Link to={`/profile/${req.requestedBy?._id}`} className="sync-user">
+                              @{req.requestedBy?.username}
+                            </Link>
+                            {" "}wants to sync {req.remixId?.title || "remix"}
+                          </p>
+                        </div>
                         <div className="sync-request-actions">
                           <button
                             className="sr-approve-btn"
@@ -582,15 +653,24 @@ export default function ProjectDetail() {
         )}
 
         <div className="detail-body">
-          <h1 className="detail-title">{project.title}</h1>
+          <div className="detail-title-row">
+            <h1 className="detail-title">{project.title}</h1>
+            <span className={`status-badge status-badge-lg ${badge.cls}`}>{badge.icon} {badge.label}</span>
+          </div>
 
           {project.remixedFrom && (
-            <p className="detail-remix-label">
-              🔀 Remixed from{" "}
+            <div className="remix-source-bar">
+               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="remix-icon">
+                 <line x1="6" y1="3" x2="6" y2="15" />
+                 <circle cx="18" cy="6" r="3" />
+                 <circle cx="6" cy="18" r="3" />
+                 <path d="M18 9a9 9 0 0 1-9 9" />
+               </svg>
+              <span>Remixed from</span>
               <Link to={`/projects/${project.remixedFrom._id}`} className="remix-source-link">
                 {project.remixedFrom.title || "a project"}
               </Link>
-            </p>
+            </div>
           )}
 
           {project.tags?.length > 0 && (
@@ -646,7 +726,12 @@ export default function ProjectDetail() {
           )}
 
           <div className="detail-section">
-            <h3>💬 Comments ({project.comments?.length || 0})</h3>
+            <h3 className="comments-heading">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 18, height: 18 }}>
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+              </svg>
+              Discussion ({project.comments?.length || 0})
+            </h3>
             {user && (
               <form onSubmit={handleComment} className="comment-form">
                 <input className="comment-input" placeholder="Add a comment..." value={comment} onChange={e => setComment(e.target.value)} />
@@ -684,15 +769,18 @@ export default function ProjectDetail() {
             <div className="detail-section">
               <h3>🤝 Pull Requests Merged ({project.syncHistory.length})</h3>
               <div className="sync-history-list" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {project.syncHistory.map(sh => (
-                  <div key={sh._id} className="sync-history-item" style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'var(--bg-secondary, #f8f9fa)', padding: '10px', borderRadius: '8px' }}>
-                    <Avatar user={sh.contributorId} size={28} />
-                    <span>
-                      <Link to={`/profile/${sh.contributorId?._id}`} style={{ fontWeight: 600, color: 'var(--primary-color)' }}>
-                        @{sh.contributorId?.username || "unknown"}
-                      </Link>
-                      {" "}contributed changes in <strong>v{sh.versionNumber}</strong> on {new Date(sh.approvedAt).toLocaleDateString()}
-                    </span>
+                {project.syncHistory.map(entry => (
+                  <div key={entry._id} className="sync-history-item" style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'var(--bg-secondary, #f8f9fa)', padding: '10px', borderRadius: '8px' }}>
+                    <Avatar user={entry.contributorId} size={32} />
+                    <div className="sync-info">
+                      <p className="sync-text">
+                        <Link to={`/profile/${entry.contributorId?._id}`} className="sync-user">
+                          @{entry.contributorId?.username}
+                        </Link>
+                        {" "}merged version {entry.versionNumber}
+                      </p>
+                      <span className="sync-date">{new Date(entry.approvedAt).toLocaleDateString()}</span>
+                    </div>
                   </div>
                 ))}
               </div>

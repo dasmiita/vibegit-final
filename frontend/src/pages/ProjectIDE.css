@@ -187,13 +187,81 @@
   gap: 1rem;
 }
 
-.spinner {
-  width: 40px;
-  height: 40px;
-  border: 3px solid rgba(255,255,255,0.1);
-  border-radius: 50%;
-  border-top-color: #3b82f6;
-  animation: spin 1s ease-in-out infinite;
+.editor-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #888;
+  font-size: 0.9rem;
+}
+
+.file-tree {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 0.5rem;
+  max-height: 400px;
+  overflow-y: auto;
+  border-radius: 4px;
+}
+
+.file-item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0.8rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.15s;
+  color: #bbb;
+}
+
+.file-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+}
+
+.file-item.active {
+  background: rgba(59, 130, 246, 0.15);
+  color: #60a5fa;
+  font-weight: 600;
+}
+
+.file-icon {
+  font-size: 0.9rem;
+  opacity: 0.7;
+}
+
+.file-name {
+  font-size: 0.8rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar-section.divider {
+  height: 1px;
+  background: #333;
+  margin: 0;
+  padding: 0;
+}
+
+/* Custom Scrollbar */
+.ide-sidebar::-webkit-scrollbar,
+.file-tree::-webkit-scrollbar {
+  width: 6px;
+}
+
+.ide-sidebar::-webkit-scrollbar-thumb,
+.file-tree::-webkit-scrollbar-thumb {
+  background: #444;
+  border-radius: 10px;
+}
+
+.ide-sidebar::-webkit-scrollbar-thumb:hover,
+.file-tree::-webkit-scrollbar-thumb:hover {
+  background: #555;
 }
 
 @keyframes spin {

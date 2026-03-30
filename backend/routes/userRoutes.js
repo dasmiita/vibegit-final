@@ -57,10 +57,31 @@ router.get("/search", optionalAuth, async (req, res) => {
           { description: { $regex: q, $options: "i" } }
         ]
       })
-        .select("title description userId")
-        .populate("userId", "username isPrivate")
-        .limit(5)
+        .select("title description userId likes comments createdAt")
+        .populate("userId", "username isPrivate avatar")
+        .limit(10)
     ]);
+
+    // To fulfill "find the username and its project", we also search for projects where the author's username matches q
+    const authorProjects = await Project.find()
+      .populate({
+        path: 'userId',
+        match: { username: { $regex: q, $options: "i" }, isPrivate: { $ne: true } },
+        select: 'username avatar isPrivate'
+      })
+      .select("title description userId likes comments createdAt")
+      .limit(10);
+
+    // Filter out results where the userId didn't match the populate match condition
+    const searchByAuthor = authorProjects.filter(p => p.userId !== null);
+
+    // Merge and deduplicate projects
+    const allProjects = [...projects];
+    searchByAuthor.forEach(ap => {
+      if (!allProjects.some(p => p._id.toString() === ap._id.toString())) {
+        allProjects.push(ap);
+      }
+    });
 
     const users = userDocs.map(u => ({
       _id: u._id,
@@ -69,7 +90,7 @@ router.get("/search", optionalAuth, async (req, res) => {
       isFollowing: followingIds.has(u._id.toString())
     }));
 
-    const publicProjects = projects.filter(p => !p.userId?.isPrivate);
+    const publicProjects = allProjects.filter(p => !p.userId?.isPrivate);
     res.json({ users, projects: publicProjects });
   } catch (err) {
     res.status(500).json({ message: err.message });

@@ -46,6 +46,7 @@ const projectSchema = new mongoose.Schema({
   comments:     [commentSchema],
   remixedFrom:  { type: mongoose.Schema.Types.ObjectId, ref: "Project", default: null },
   remixCount:   { type: Number, default: 0 },
+  isPublicRemix: { type: Boolean, default: true }, // Whether anyone can remix or it requires approval
   allowedRemixers: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
   remixAccessRequests: [{
     userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
@@ -55,6 +56,7 @@ const projectSchema = new mongoose.Schema({
   syncRequests: [{
     remixId:       { type: mongoose.Schema.Types.ObjectId, ref: "Project", default: null },
     requestedBy:   { type: mongoose.Schema.Types.ObjectId, ref: "User",    required: true },
+    summary:       { type: String, default: "" }, // Change summary/commit message
     status:        { type: String, enum: ["pending", "approved", "declined"], default: "pending" },
     createdAt:     { type: Date, default: Date.now }
   }],

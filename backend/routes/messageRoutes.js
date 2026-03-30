@@ -4,6 +4,19 @@ const Message = require("../models/Message");
 const User = require("../models/User");
 const auth = require("../middleware/auth");
 
+// GET /messages/unread/count
+router.get("/unread/count", auth, async (req, res) => {
+  try {
+    const count = await Message.countDocuments({
+      receiverId: req.user.id,
+      read: false
+    });
+    res.json({ count });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 // GET /messages/conversations - Get a list of users the current user has chatted with
 router.get("/conversations", auth, async (req, res) => {
   try {

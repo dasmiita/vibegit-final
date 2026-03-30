@@ -26,11 +26,15 @@ router.post("/signup", async (req, res) => {
 // POST /auth/login
 router.post("/login", async (req, res) => {
   try {
-    const { email, password } = req.body;
-    const user = await User.findOne({ email });
-    if (!user) return res.status(400).json({ message: "Invalid credentials" });
-
+    const { identifier, password } = req.body;
+    console.log("Login attempt with:", identifier);
+    const user = await User.findOne({ $or: [{ email: identifier }, { username: identifier }] });
+    if (!user) {
+      console.log("User not found for:", identifier);
+      return res.status(400).json({ message: "Invalid credentials" });
+    }
     const match = await bcrypt.compare(password, user.password);
+    console.log("Password match for", identifier, ":", match);
     if (!match) return res.status(400).json({ message: "Invalid credentials" });
 
     const token = jwt.sign({ id: user._id, username: user.username }, SECRET, { expiresIn: "7d" });

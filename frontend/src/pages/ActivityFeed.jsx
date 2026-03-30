@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../api/axios";
+import Avatar from "../components/Avatar";
 import "./ActivityFeed.css";
 
 const BASE = "http://localhost:5000/uploads/";
@@ -11,8 +12,9 @@ const ACTION_TEXT = {
   remixed:        (a) => <>remixed <ProjectLink a={a} /> {a.meta ? `from "${a.meta}"` : ""}</>,
   followed:       ()  => <>followed someone</>,
   commented:      (a) => <>commented on <ProjectLink a={a} /></>,
-  sync_requested: (a) => <>requested a sync for <ProjectLink a={a} /> {a.meta ? `from "${a.meta}"` : ""}</>,
-  sync_approved:  (a) => <>approved a sync — <ProjectLink a={a} /> was updated</>
+  sync_requested: (a) => <>requested a sync for <ProjectLink a={a} /></>,
+  sync_approved:  (a) => <>approved a sync — <ProjectLink a={a} /> was updated</>,
+  remix_requested: (a) => <>requested remix access for <ProjectLink a={a} /></>
 };
 
 function ProjectLink({ a }) {
@@ -59,12 +61,7 @@ export default function ActivityFeed() {
 
             return (
               <div key={a._id} className="activity-item">
-                <div className="activity-avatar">
-                  {avatarUrl
-                    ? <img src={avatarUrl} alt="" />
-                    : <div className="activity-avatar-placeholder">{username[0].toUpperCase()}</div>
-                  }
-                </div>
+                <Avatar user={a.userId} size={42} className="activity-avatar-comp" />
                 <div className="activity-body">
                   <p className="activity-text">
                     <Link to={`/profile/${userId}`} className="activity-user">@{username}</Link>

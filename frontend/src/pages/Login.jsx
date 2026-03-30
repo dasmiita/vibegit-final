@@ -6,7 +6,7 @@ import "./Login.css";
 
 export default function Login() {
   const [isSignup, setIsSignup] = useState(false);
-  const [form, setForm] = useState({ username: "", email: "", password: "" });
+  const [form, setForm] = useState({ username: "", email: "", identifier: "", password: "" });
   const [error, setError] = useState("");
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -16,7 +16,7 @@ export default function Login() {
     setError("");
     try {
       const endpoint = isSignup ? "/auth/signup" : "/auth/login";
-      const payload = isSignup ? form : { email: form.email, password: form.password };
+      const payload = isSignup ? form : { identifier: form.identifier, password: form.password };
       const res = await api.post(endpoint, payload);
       login(res.data.user, res.data.token);
       navigate("/");
@@ -40,13 +40,23 @@ export default function Login() {
               required
             />
           )}
-          <input
-            type="email"
-            placeholder="Email"
-            value={form.email}
-            onChange={(e) => setForm({ ...form, email: e.target.value })}
-            required
-          />
+          {!isSignup && (
+            <input
+              placeholder="Username or Email"
+              value={form.identifier}
+              onChange={(e) => setForm({ ...form, identifier: e.target.value })}
+              required
+            />
+          )}
+          {isSignup && (
+            <input
+              type="email"
+              placeholder="Email"
+              value={form.email}
+              onChange={(e) => setForm({ ...form, email: e.target.value })}
+              required
+            />
+          )}
           <input
             type="password"
             placeholder="Password"

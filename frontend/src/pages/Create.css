@@ -19,7 +19,25 @@
 .create-card h1 {
   color: var(--text);
   font-size: 1.4rem;
-  margin-bottom: 1.5rem;
+  margin-bottom: 0;
+}
+
+.restore-draft-btn {
+  background: var(--accent-dim);
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 20px;
+  padding: 0.35rem 0.85rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.restore-draft-btn:hover {
+  background: var(--accent);
+  color: var(--accent-text);
+  transform: translateY(-1px);
 }
 
 .create-form {

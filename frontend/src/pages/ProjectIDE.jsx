@@ -5,6 +5,31 @@ import api from "../api/axios";
 import { useAuth } from "../context/AuthContext";
 import "./ProjectIDE.css";
 
+const getLanguage = (filename) => {
+  if (!filename) return "plaintext";
+  const ext = filename.split(".").pop().toLowerCase();
+  switch (ext) {
+    case "js": case "jsx": return "javascript";
+    case "ts": case "tsx": return "typescript";
+    case "py": return "python";
+    case "html": return "html";
+    case "css": return "css";
+    case "json": return "json";
+    case "md": return "markdown";
+    case "java": return "java";
+    case "c": case "cpp": case "h": case "hpp": return "cpp";
+    case "cs": return "csharp";
+    case "go": return "go";
+    case "rs": return "rust";
+    case "rb": return "ruby";
+    case "php": return "php";
+    case "sql": return "sql";
+    case "sh": case "bash": return "shell";
+    case "env": case "example": return "ini";
+    default: return "plaintext";
+  }
+};
+
 export default function ProjectIDE() {
   const { id } = useParams();
   const { user } = useAuth();
@@ -15,6 +40,8 @@ export default function ProjectIDE() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [syncSending, setSyncSending] = useState(false);
+  const [selectedFileIndex, setSelectedFileIndex] = useState(null);
+  const [fileLoading, setFileLoading] = useState(false);
 
   const editorRef = useRef(null);
 
@@ -22,24 +49,52 @@ export default function ProjectIDE() {
     if (!user) return navigate("/login");
     api.get(`/projects/${id}`).then(res => {
       setProject(res.data);
-      setCode(res.data.codeSnippet || "");
+      if (res.data.files && res.data.files.length > 0) {
+        handleFileSelect(0);
+      } else {
+        setCode(res.data.codeSnippet || "");
+      }
       setLoading(false);
     }).catch(() => {
       navigate("/");
     });
   }, [id, user, navigate]);
 
+  const handleFileSelect = async (index) => {
+    setSelectedFileIndex(index);
+    setFileLoading(true);
+    try {
+      const res = await api.get(`/projects/${id}/files/${index}/content`);
+      setCode(res.data.content);
+    } catch (err) {
+      setCode("// Error loading file or file is not text-based.");
+    } finally {
+      setFileLoading(false);
+    }
+  };
+
   function handleEditorDidMount(editor, monaco) {
     editorRef.current = editor;
   }
 
   const handleSave = async () => {
+    if (selectedFileIndex === null) {
+      // Legacy snippet save
+      setSaving(true);
+      try {
+        await api.put(`/projects/${id}`, { codeSnippet: code });
+        alert("Code saved successfully!");
+      } catch (err) { alert("Error saving: " + err.message); }
+      finally { setSaving(false); }
+      return;
+    }
+
     setSaving(true);
     try {
-      await api.put(`/projects/${id}`, { codeSnippet: code });
-      alert("Code saved successfully!");
+      await api.put(`/projects/${id}/files/${selectedFileIndex}/content`, { content: code });
+      alert("File saved successfully!");
     } catch (err) {
-      alert("Error saving: " + err.message);
+      alert("Error saving file: " + err.message);
     } finally {
       setSaving(false);
     }
@@ -94,6 +149,9 @@ export default function ProjectIDE() {
           </div>
         </div>
         <div className="ide-header-right">
+          <button className="ide-btn" onClick={() => window.open(`${api.defaults.baseURL}/projects/${id}/download`)} title="Download ZIP">
+            📥 ZIP
+          </button>
           <button className="ide-btn save-btn" onClick={handleSave} disabled={saving}>
             {saving ? "Saving..." : "💾 Save"}
           </button>
@@ -113,35 +171,62 @@ export default function ProjectIDE() {
       <div className="ide-main">
          <div className="ide-sidebar">
             <div className="sidebar-section">
-              <h4>Project Info</h4>
+              <h4>Vibe Navigator</h4>
+              <div className="file-tree">
+                {project.files && project.files.length > 0 ? (
+                  project.files.map((file, i) => (
+                    <div 
+                      key={i} 
+                      className={`file-item ${selectedFileIndex === i ? "active" : ""}`}
+                      onClick={() => handleFileSelect(i)}
+                    >
+                      <span className="file-icon">📄</span>
+                      <span className="file-name">{file.name}</span>
+                    </div>
+                  ))
+                ) : (
+                  <p className="no-files">No project files found.</p>
+                )}
+              </div>
+            </div>
+            
+            <div className="sidebar-section divider"></div>
+
+            <div className="sidebar-section">
+              <h4>Project Desc</h4>
               <p className="sidebar-desc">{project.description}</p>
             </div>
             {isRemix && (
               <div className="sidebar-section">
-                <h4>Original Source</h4>
-                <p>Remixed from: <strong>{project.remixedFrom.title || "Unknown"}</strong></p>
+                <h4>Sync Control</h4>
                 <div className="sidebar-hint">
-                  <p><strong>Pull</strong> to fetch their latest changes.</p>
-                  <p><strong>Push</strong> to propose your edits to them natively.</p>
+                  <p><strong>Pull</strong> to fetch latest original code.</p>
+                  <p><strong>Push</strong> to suggest your edits back.</p>
                 </div>
               </div>
             )}
          </div>
          <div className="ide-editor-wrapper">
-           <Editor
-             height="100%"
-             defaultLanguage="javascript"
-             theme="vs-dark"
-             value={code}
-             onChange={(value) => setCode(value)}
-             onMount={handleEditorDidMount}
-             options={{
-               minimap: { enabled: false },
-               fontSize: 15,
-               wordWrap: "on",
-               fontFamily: "'Fira Code', 'Courier New', monospace"
-             }}
-           />
+           {fileLoading ? (
+             <div className="editor-loading">Loading file...</div>
+           ) : (
+             <Editor
+               height="100%"
+               language={selectedFileIndex !== null ? getLanguage(project.files[selectedFileIndex].name) : "javascript"}
+               theme="vs-dark"
+               value={code}
+               onChange={(value) => setCode(value)}
+               onMount={handleEditorDidMount}
+               options={{
+                 minimap: { enabled: false },
+                 fontSize: 14,
+                 wordWrap: "on",
+                 fontFamily: "'Fira Code', monospace",
+                 smoothScrolling: true,
+                 cursorBlinking: "smooth"
+               }}
+             />
+           )}
          </div>
       </div>
     </div>

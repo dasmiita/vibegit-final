@@ -4,6 +4,9 @@ const multer = require("multer");
 const Project = require("../models/Project");
 const Activity = require("../models/Activity");
 const auth = require("../middleware/auth");
+const fs = require("fs");
+const path = require("path");
+const AdmZip = require("adm-zip");
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, "uploads/"),
@@ -41,7 +44,7 @@ router.get("/", async (req, res) => {
 });
 
 // POST /projects
-router.post("/", auth, upload.array("files", 200), async (req, res) => {
+router.post("/", auth, upload.array("files", 10000), async (req, res) => {
   try {
     const { title, description, codeSnippet, tags, status, domain, features, howItWorks, futurePlans } = req.body;
     // Support folder uploads — use relativePath if available (sent from frontend via formData field)
@@ -76,10 +79,14 @@ router.post("/:id/remix", auth, async (req, res) => {
     const original = await Project.findById(req.params.id);
     if (!original) return res.status(404).json({ message: "Project not found" });
     const isOwner = original.userId.toString() === req.user.id;
-    // Ensure only explicitly allowed users (or the owner themselves) can remix/branch
-    const isAllowed = isOwner || original.allowedRemixers?.some(uId => uId.toString() === req.user.id);
+    
+    // Check if remixing is allowed:
+    // 1. If it's public, anyone can remix.
+    // 2. If it's not public, only owner or explicitly allowed users can remix.
+    const isAllowed = original.isPublicRemix || isOwner || original.allowedRemixers?.some(uId => uId.toString() === req.user.id);
+    
     if (!isAllowed) {
-      return res.status(403).json({ message: "You must request access from the creator to branch this project." });
+      return res.status(403).json({ message: "This project is private. You must request access from the creator to branch it." });
     }
 
     const remixed = await Project.create({
@@ -129,10 +136,12 @@ router.post("/:id/pull", auth, async (req, res) => {
     if (!original)
       return res.status(404).json({ message: "Original project no longer exists." });
 
-    // Security check: Make sure user hasn't been revoked from original project
-    const isAllowed = original.allowedRemixers?.some(uId => uId.toString() === req.user.id);
+    // Security check: Make sure user is either the owner, an allowed remixer, or the project is public
+    const isOwner = original.userId.toString() === req.user.id;
+    const isAllowed = original.isPublicRemix || isOwner || original.allowedRemixers?.some(uId => uId.toString() === req.user.id);
+    
     if (!isAllowed) {
-      return res.status(403).json({ message: "Your access to this project has been revoked by the creator." });
+      return res.status(403).json({ message: "This project is private and you don't have access to pull updates." });
     }
 
     // Snapshot the remix's current state before overriding
@@ -205,6 +214,10 @@ router.post("/:id/comments", auth, async (req, res) => {
     if (!project) return res.status(404).json({ message: "Not found" });
     project.comments.push({ userId: req.user.id, text: req.body.text });
     await project.save();
+    
+    console.log("Creating activity for user", req.user.id, "on project", project._id);
+    const act = await Activity.create({ userId: req.user.id, type: "commented", projectId: project._id, targetId: project.userId });
+    console.log("Activity created:", act._id);
     
     // We do NOT use Activity for comments to avoid spam.
     await project.populate("comments.userId", "username avatar");
@@ -282,13 +295,16 @@ router.post("/:id/sync-request", auth, async (req, res) => {
     if (alreadyPending)
       return res.status(400).json({ message: "You already have a pending sync request" });
 
+    const { summary } = req.body;
+
     // Find user's remix if it exists, otherwise use their userId as reference
     const remix = await Project.findOne({ remixedFrom: req.params.id, userId: req.user.id });
 
     if (!Array.isArray(original.syncRequests)) original.syncRequests = [];
     original.syncRequests.push({
       remixId:     remix ? remix._id : null,
-      requestedBy: req.user.id
+      requestedBy: req.user.id,
+      summary:     summary || "Syncing changes from branch"
     });
     await original.save();
 
@@ -430,6 +446,17 @@ router.post("/:id/req-access", auth, async (req, res) => {
     project.remixAccessRequests.push({ userId: req.user.id });
     
     await project.save();
+    
+    // Create activity for the owner
+    const Activity = require("../models/Activity");
+    await Activity.create({
+      userId: req.user.id,
+      type: "remix_requested",
+      projectId: project._id,
+      targetId: project.userId,
+      meta: project.title
+    });
+
     // Populate and return updated requests so UI can update correctly
     await project.populate("remixAccessRequests.userId", "username avatar");
     res.json({ message: "Access requested successfully", remixAccessRequests: project.remixAccessRequests });
@@ -494,6 +521,75 @@ router.delete("/:id/revoke-access/:userId", auth, async (req, res) => {
   }
 });
 
+// POST /projects/:id/toggle-public-remix
+router.post("/:id/toggle-public-remix", auth, async (req, res) => {
+  try {
+    const project = await Project.findById(req.params.id);
+    if (!project) return res.status(404).json({ message: "Not found" });
+
+    if (project.userId.toString() !== req.user.id)
+      return res.status(403).json({ message: "Not authorized" });
+
+    project.isPublicRemix = !project.isPublicRemix;
+    await project.save();
+    res.json({ isPublicRemix: project.isPublicRemix, message: `Remixing is now ${project.isPublicRemix ? "Public" : "Private (Request Only)"}` });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// ── File Content Editing (IDE) ──
+
+// GET /projects/:id/files/:fileIndex/content
+router.get("/:id/files/:fileIndex/content", async (req, res) => {
+  try {
+    const project = await Project.findById(req.params.id);
+    if (!project) return res.status(404).json({ message: "Not found" });
+
+    const file = project.files[req.params.fileIndex];
+    if (!file) return res.status(404).json({ message: "File not found" });
+
+    const filePath = path.join(__dirname, "..", "uploads", file.path);
+    if (!fs.existsSync(filePath)) return res.status(404).json({ message: "File missing on server" });
+
+    // Ensure it's not a binary file roughly (e.g. image/zip)
+    const ext = path.extname(file.name).toLowerCase();
+    const isBinary = [".png", ".jpg", ".jpeg", ".gif", ".webp", ".zip", ".pdf", ".mp4", ".mp3"].includes(ext);
+    if (isBinary) return res.status(400).json({ message: "Cannot edit binary files" });
+
+    const content = fs.readFileSync(filePath, "utf8");
+    res.json({ content });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// PUT /projects/:id/files/:fileIndex/content
+router.put("/:id/files/:fileIndex/content", auth, async (req, res) => {
+  try {
+    const project = await Project.findById(req.params.id);
+    if (!project) return res.status(404).json({ message: "Not found" });
+
+    if (project.userId.toString() !== req.user.id)
+      return res.status(403).json({ message: "Not authorized" });
+
+    const file = project.files[req.params.fileIndex];
+    if (!file) return res.status(404).json({ message: "File not found" });
+
+    const filePath = path.join(__dirname, "..", "uploads", file.path);
+    if (!fs.existsSync(filePath)) return res.status(404).json({ message: "File missing on server" });
+
+    fs.writeFileSync(filePath, req.body.content, "utf8");
+    
+    project.updatedAt = new Date();
+    await project.save();
+
+    res.json({ message: "File updated" });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 // ── Generic /:id routes LAST ──
 
 // GET /projects/:id
@@ -505,6 +601,8 @@ router.get("/:id", async (req, res) => {
       .populate("remixedFrom", "title userId")
       .populate("syncHistory.contributorId", "username avatar")
       .populate("remixAccessRequests.userId", "username avatar")
+      .populate("syncRequests.requestedBy", "username avatar")
+      .populate("syncRequests.remixId", "title")
       .populate("allowedRemixers", "username avatar");
     if (!project) return res.status(404).json({ message: "Not found" });
     res.json(project);

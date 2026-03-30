@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../api/axios";
 import { useAuth } from "../context/AuthContext";
+import Avatar from "./Avatar";
 import "./ProjectCard.css";
 
 const STATUS_BADGE = {
@@ -85,18 +86,24 @@ export default function ProjectCard({ project, compact = false, tile = false, on
     >
       {tile && (
         <div className="tile-overlay">
-          <span>⬆ {likes}</span>
-          <span>💬 {project.comments?.length || 0}</span>
+          <div className="tile-stat">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14 }}>
+              <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" />
+            </svg>
+            <span>{likes}</span>
+          </div>
+          <div className="tile-stat">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14 }}>
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+            </svg>
+            <span>{comments.length}</span>
+          </div>
         </div>
       )}
 
       <div className="card-header">
         <div className="card-header-left">
-          {project.userId?.avatar ? (
-            <img src={`http://localhost:5000/uploads/${project.userId.avatar}`} alt="" className="card-avatar" />
-          ) : (
-            <div className="card-avatar-placeholder">{username[0].toUpperCase()}</div>
-          )}
+          <Avatar user={project.userId} size={32} className="card-avatar-comp" />
           <Link to={`/profile/${userId}`} className="card-username" onClick={e => e.stopPropagation()}>
             @{username}
           </Link>
@@ -111,7 +118,15 @@ export default function ProjectCard({ project, compact = false, tile = false, on
       <h3 className="card-title">{project.title}</h3>
 
       {project.remixedFrom && (
-        <p className="remix-label">🔀 Remixed from <em>{project.remixedFrom.title || "a project"}</em></p>
+        <div className="remix-label-main">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 12, height: 12 }}>
+            <line x1="6" y1="3" x2="6" y2="15" />
+            <circle cx="18" cy="6" r="3" />
+            <circle cx="6" cy="18" r="3" />
+            <path d="M18 9a9 9 0 0 1-9 9" />
+          </svg>
+          <em>Remixed from {project.remixedFrom.title || "a project"}</em>
+        </div>
       )}
 
       <p className="card-desc">{project.description}</p>
@@ -132,16 +147,42 @@ export default function ProjectCard({ project, compact = false, tile = false, on
 
       <div className="card-footer">
         <div className="card-actions">
-          <button className={`like-btn ${liked ? "liked" : ""}`} onClick={handleLike}>⬆ Upvote {likes}</button>
-          <span className="card-action" onClick={toggleComments} title="Comments">💬 {comments.length}</span>
+          <button className={`like-btn-p ${liked ? "liked" : ""}`} onClick={handleLike}>
+            <svg viewBox="0 0 24 24" fill={liked ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14 }}>
+              <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" />
+            </svg>
+            <span>{likes}</span>
+          </button>
+          
+          <button className="card-action-btn" onClick={toggleComments} title="Comments">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14 }}>
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+            </svg>
+            <span>{comments.length}</span>
+          </button>
+
           {user && !isOwner && (
-            <span className="card-action" onClick={(e) => { e.stopPropagation(); window.dispatchEvent(new CustomEvent("vibe:open-chat", { detail: { userId, user: project.userId } })); }} title="Message Owner">
-              🔵 Message
-            </span>
+            <button className="card-action-btn" onClick={(e) => { e.stopPropagation(); window.dispatchEvent(new CustomEvent("vibe:open-chat", { detail: { userId, user: project.userId } })); }} title="Message Owner">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14 }}>
+                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+              </svg>
+              <span>Message</span>
+            </button>
           )}
-          {project.remixCount > 0 && <span className="remix-count">🔀 {project.remixCount}</span>}
+
+          {project.remixCount > 0 && (
+            <div className="remix-count-p">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 12, height: 12 }}>
+                <line x1="6" y1="3" x2="6" y2="15" />
+                <circle cx="18" cy="6" r="3" />
+                <circle cx="6" cy="18" r="3" />
+                <path d="M18 9a9 9 0 0 1-9 9" />
+              </svg>
+              <span>{project.remixCount}</span>
+            </div>
+          )}
         </div>
-        <span className="card-date">{new Date(project.createdAt).toLocaleDateString()}</span>
+        <span className="card-date">{new Date(project.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
       </div>
 
       {showComments && !compact && !tile && (

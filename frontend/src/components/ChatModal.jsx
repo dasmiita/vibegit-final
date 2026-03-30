@@ -39,15 +39,18 @@ export default function ChatModal({ onClose, initialUserId, initialUser }) {
   // If opened with a specific user, auto-open that chat
   useEffect(() => {
     if (initialUserId && initialUser) {
+      // Force history load for specific user
       openChat({ _id: initialUserId, username: initialUser.username, avatar: initialUser.avatar });
     }
-  }, [initialUserId]);
+  }, [initialUserId, initialUser]); // Added initialUser to dependencies
 
   const openChat = async (partner) => {
     setActiveChat(partner);
     try {
       const res = await api.get(`/messages/${partner._id}`);
       setMessages(res.data);
+      // Notify navbar to update unread count immediately
+      window.dispatchEvent(new CustomEvent("vibe:unread-update"));
     } catch {}
   };
 
@@ -93,7 +96,12 @@ export default function ChatModal({ onClose, initialUserId, initialUser }) {
         {/* Sidebar: Conversations */}
         <div className="chat-sidebar">
           <div className="chat-sidebar-header">
-            <span className="chat-title">💬 Messages</span>
+            <span className="chat-title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: "18px", height: "18px", verticalAlign: "middle", marginRight: "8px", color: "var(--accent)" }}>
+                <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+              </svg>
+              Messages
+            </span>
             <button className="chat-close-btn" onClick={onClose}>✕</button>
           </div>
           {loading ? (
@@ -139,7 +147,11 @@ export default function ChatModal({ onClose, initialUserId, initialUser }) {
         <div className="chat-window">
           {!activeChat ? (
             <div className="chat-empty-state">
-              <div className="chat-empty-icon">💬</div>
+              <div className="chat-empty-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: "64px", height: "64px", color: "rgba(255,255,255,0.15)" }}>
+                  <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+                </svg>
+              </div>
               <p>Select a conversation or go to a user's profile and click <strong>Message</strong></p>
             </div>
           ) : (
@@ -153,7 +165,7 @@ export default function ChatModal({ onClose, initialUserId, initialUser }) {
                   <p className="chat-no-msgs">Start chatting with @{activeChat.username}!</p>
                 )}
                 {messages.map((msg, i) => {
-                  const isMine = msg.senderId === user.id || msg.senderId?.toString() === user.id;
+                  const isMine = String(msg.senderId) === String(user.id);
                   return (
                     <div key={i} className={`chat-bubble-row ${isMine ? "mine" : "theirs"}`}>
                       <div className={`chat-bubble ${isMine ? "bubble-mine" : "bubble-theirs"}`}>

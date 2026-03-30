@@ -3,6 +3,8 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/axios";
 import { useAuth } from "../context/AuthContext";
+import Toast, { useToast } from "../components/Toast";
+import UploadModal from "../components/UploadModal";
 import { DOMAINS, DOMAIN_TAGS } from "../utils/domains";
 import "./Create.css";
 
@@ -23,15 +25,62 @@ export default function Create() {
   const [files, setFiles] = useState([]);
   const [skippedCount, setSkippedCount] = useState(0);
   const [readme, setReadme] = useState("");
-  const [error, setError] = useState("");
+  const { toasts, show: showToast, dismiss } = useToast();
   const [loading, setLoading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
+  const [hasDraft, setHasDraft] = useState(false);
+  
+  // Upload progress states
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadStatus, setUploadStatus] = useState("idle"); // idle, uploading, done, error
+  const abortControllerRef = React.useRef(null);
+
+  // Load draft on mount
+  React.useEffect(() => {
+    const saved = localStorage.getItem("vibe:project_draft");
+    if (saved) {
+      setHasDraft(true);
+    }
+  }, []);
+
+  const restoreDraft = () => {
+    try {
+      const saved = JSON.parse(localStorage.getItem("vibe:project_draft"));
+      if (saved) {
+        setForm(saved.form || { title: "", description: "", codeSnippet: "" });
+        setAbout(saved.about || { features: "", howItWorks: "", futurePlans: "" });
+        setDomain(saved.domain || "");
+        setStatus(saved.status || "idea");
+        setExtraTags(saved.extraTags || "");
+        setReadme(saved.readme || "");
+        showToast("Draft restored! Note: You'll need to re-select your files.", "info", "Draft Restored");
+      }
+    } catch {}
+    setHasDraft(false);
+  };
+
+  const clearDraft = () => {
+    localStorage.removeItem("vibe:project_draft");
+    setHasDraft(false);
+  };
+
+  // Save draft on changes
+  React.useEffect(() => {
+    const draft = { form, about, domain, status, extraTags, readme };
+    // Only save if there's actual content
+    if (form.title || form.description || readme || about.features) {
+      localStorage.setItem("vibe:project_draft", JSON.stringify(draft));
+    }
+  }, [form, about, domain, status, extraTags, readme]);
 
   const EXCLUDE_DIRS = [
     "node_modules", ".git", ".next", "dist", "build", "venv", "__pycache__",
-    ".cache", ".vscode", "target", "vendor"
+    ".cache", ".vscode", "target", "vendor", ".idea", ".gradle", "bin", "obj",
+    "env", ".venv", "Lib", "site-packages", ".pytest_cache", ".sass-cache",
+    "bower_components", "jspm_packages", "platforms", "plugins"
   ];
-  const EXCLUDE_FILES = [".DS_Store", "package-lock.json", "yarn.lock", "pnpm-lock.yaml"];
+  const EXCLUDE_FILES = [".DS_Store", "package-lock.json", "yarn.lock", "pnpm-lock.yaml", ".env.local"];
 
   const fileInputRef = React.useRef();
   const folderInputRef = React.useRef();
@@ -100,6 +149,24 @@ export default function Create() {
     }
   };
 
+  const handleFileSelection = (e) => {
+    const selected = Array.from(e.target.files);
+    let newFiles = [];
+    let skipped = 0;
+
+    selected.forEach(f => {
+      const path = f.webkitRelativePath || f.name;
+      const parts = path.split("/");
+      const isExcluded = parts.some(part => EXCLUDE_DIRS.includes(part) || EXCLUDE_FILES.includes(part));
+      
+      if (isExcluded) skipped++;
+      else newFiles.push(f);
+    });
+
+    if (skipped > 0) setSkippedCount(prev => prev + skipped);
+    setFiles(prev => [...prev, ...newFiles]);
+  };
+
   if (!user) { navigate("/login"); return null; }
 
   const autoTags = domain ? DOMAIN_TAGS[domain] : [];
@@ -110,8 +177,13 @@ export default function Create() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
     setLoading(true);
+    setUploadProgress(0);
+    setUploadStatus("uploading");
+    setShowUploadModal(true);
+    
+    abortControllerRef.current = new AbortController();
+
     try {
       const data = new FormData();
       data.append("title", form.title);
@@ -131,23 +203,55 @@ export default function Create() {
       }
 
       allFiles.forEach(f => data.append("files", f, f.name));
-      // Send relative paths so backend can display the folder structure
-      // We check for our custom uploadRelativePath (from drop) or webkitRelativePath (from button)
       const relativePaths = allFiles.map(f => f.uploadRelativePath || f.webkitRelativePath || f.name);
       data.append("relativePaths", JSON.stringify(relativePaths));
-      await api.post("/projects", data);
-      navigate("/");
+
+      await api.post("/projects", data, {
+        signal: abortControllerRef.current.signal,
+        onUploadProgress: (progressEvent) => {
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          setUploadProgress(percentCompleted);
+        }
+      });
+
+      setUploadStatus("done");
+      clearDraft();
+      showToast("Your project has been posted successfully!", "success", "Project Created 🎉");
+      setTimeout(() => {
+        setShowUploadModal(false);
+        navigate("/");
+      }, 1500);
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to create project");
+      if (err.name === "CanceledError" || err.message === "canceled") {
+        showToast("Upload canceled by user", "info", "Canceled");
+      } else {
+        setUploadStatus("error");
+        const msg = err.response?.data?.message || "Failed to create project";
+        showToast(msg, "error", "Submission Failed");
+      }
+      setShowUploadModal(false);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const cancelUpload = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
     }
   };
 
   return (
     <div className="create-page">
       <div className="create-card">
-        <h1>New Project</h1>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
+          <h1>New Project</h1>
+          {hasDraft && (
+            <button type="button" className="restore-draft-btn" onClick={restoreDraft}>
+              ✨ Restore Draft
+            </button>
+          )}
+        </div>
         <form onSubmit={handleSubmit} className="create-form">
 
           <input
@@ -255,7 +359,7 @@ export default function Create() {
               type="file"
               multiple
               style={{ display: "none" }}
-              onChange={e => setFiles(prev => [...prev, ...Array.from(e.target.files)])}
+              onChange={handleFileSelection}
             />
             <input
               ref={folderInputRef}
@@ -264,7 +368,7 @@ export default function Create() {
               directory="true"
               multiple
               style={{ display: "none" }}
-              onChange={e => setFiles(prev => [...prev, ...Array.from(e.target.files)])}
+              onChange={handleFileSelection}
             />
 
             {/* Drag-and-drop zone */}
@@ -317,7 +421,16 @@ export default function Create() {
             </div>
           </div>
 
-          {error && <p className="create-error">{error}</p>}
+          <Toast toasts={toasts} dismiss={dismiss} />
+
+          <UploadModal 
+            isOpen={showUploadModal} 
+            files={files} 
+            skipped={skippedCount} 
+            progress={uploadProgress}
+            status={uploadStatus}
+            onCancel={cancelUpload}
+          />
 
           <div className="create-section">
             <label>README.md <span className="optional">(optional)</span></label>

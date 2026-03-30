@@ -5,6 +5,13 @@ import { useAuth } from "../context/AuthContext";
 import ProjectCard from "../components/ProjectCard";
 import "./Search.css";
 
+function Avatar({ user, size = 32 }) {
+  const url = user?.avatar ? `http://localhost:5000/uploads/${user.avatar}` : null;
+  const letter = (user?.username || "?")[0].toUpperCase();
+  if (url) return <img src={url} alt="" className="sr-avatar-img" style={{ width: size, height: size }} />;
+  return <div className="sr-avatar-placeholder" style={{ width: size, height: size, fontSize: size * 0.4 }}>{letter}</div>;
+}
+
 const AVATAR_BASE = "http://localhost:5000/uploads/";
 
 export default function Search() {
@@ -58,14 +65,13 @@ export default function Search() {
             ) : (
               <div className="search-users">
                 {users.map((u) => (
-                  <div key={u._id} className="search-user-row">
-                    <Link to={`/profile/${u._id}`} className="search-user-card">
-                      {u.avatar ? (
-                        <img src={`${AVATAR_BASE}${u.avatar}`} alt="" className="search-avatar" />
-                      ) : (
-                        <div className="search-avatar-placeholder">{u.username[0].toUpperCase()}</div>
-                      )}
-                      <span>@{u.username}</span>
+                  <div key={u._id} className="search-user-item">
+                    <Link to={`/profile/${u._id}`} className="search-user-link">
+                      <Avatar user={u} size={44} />
+                      <div className="search-user-info">
+                        <span className="search-user-name">@{u.username}</span>
+                        <span className="search-user-slug">Software Artisan</span>
+                      </div>
                     </Link>
                     {String(user?.id) !== String(u._id) && (
                       <button
