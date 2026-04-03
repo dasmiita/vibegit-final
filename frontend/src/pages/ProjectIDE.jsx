@@ -158,10 +158,10 @@ export default function ProjectIDE() {
           {isRemix && (
             <>
               <button className="ide-btn pull-btn" onClick={handlePullUpdates}>
-                ⬇ Pull
+                ⬇ Sync Updates
               </button>
               <button className="ide-btn push-btn" onClick={handlePushToOriginal} disabled={syncSending}>
-                {syncSending ? "Pushing..." : "⬆ Push"}
+                {syncSending ? "Syncing..." : "⬆ Request Merge"}
               </button>
             </>
           )}

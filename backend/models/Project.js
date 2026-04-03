@@ -53,6 +53,12 @@ const projectSchema = new mongoose.Schema({
     status: { type: String, enum: ["pending", "approved", "declined"], default: "pending" },
     createdAt: { type: Date, default: Date.now }
   }],
+  remixRequests: [{
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    message: { type: String, default: "" },
+    status: { type: String, enum: ["pending", "approved", "declined"], default: "pending" },
+    createdAt: { type: Date, default: Date.now }
+  }],
   syncRequests: [{
     remixId:       { type: mongoose.Schema.Types.ObjectId, ref: "Project", default: null },
     requestedBy:   { type: mongoose.Schema.Types.ObjectId, ref: "User",    required: true },

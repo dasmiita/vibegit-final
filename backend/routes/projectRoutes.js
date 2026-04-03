@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const multer = require("multer");
 const Project = require("../models/Project");
+const Branch = require("../models/Branch");
 const Activity = require("../models/Activity");
 const auth = require("../middleware/auth");
 const fs = require("fs");
@@ -61,6 +62,15 @@ router.post("/", auth, upload.array("files", 10000), async (req, res) => {
       about: { features: features || "", howItWorks: howItWorks || "", futurePlans: futurePlans || "" },
       files,
       userId: req.user.id
+    });
+
+    await Branch.create({
+      branchName: "main",
+      sourceProjectId: project._id,
+      remixProjectId: project._id,
+      branchOwner: req.user.id,
+      visibility: "public",
+      status: "active"
     });
 
     await Activity.create({ userId: req.user.id, type: "created", projectId: project._id });
@@ -424,6 +434,86 @@ router.post("/:id/sync-request/:reqId/respond", auth, async (req, res) => {
 
 // ── Access Control Routes ──
 
+// POST /projects/:id/remix-request
+router.post("/:id/remix-request", auth, async (req, res) => {
+  try {
+    const project = await Project.findById(req.params.id);
+    if (!project) return res.status(404).json({ message: "Project not found" });
+
+    const hasPending = project.remixRequests?.some(
+      r => r.userId.toString() === req.user.id && r.status === "pending"
+    );
+    if (hasPending) return res.status(400).json({ message: "Request already exists" });
+
+    if (!Array.isArray(project.remixRequests)) project.remixRequests = [];
+    project.remixRequests.push({
+      userId: req.user.id,
+      message: req.body.message || "",
+      status: "pending",
+      createdAt: new Date()
+    });
+
+    console.log("Remix Request Saved:");
+    console.log("Project:", project._id);
+    console.log("User:", req.user.id);
+
+    await project.save();
+    res.json({ message: "Remix request sent" });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// GET /projects/:id/remix-requests
+router.get("/:id/remix-requests", auth, async (req, res) => {
+  try {
+    const project = await Project.findById(req.params.id)
+      .populate("remixRequests.userId", "username avatar");
+    if (!project) return res.status(404).json({ message: "Not found" });
+
+    if (project.userId.toString() !== req.user.id)
+      return res.status(403).json({ message: "Not authorized" });
+
+    const pending = (project.remixRequests || []).filter(r => r.status === "pending");
+    res.json(pending);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// POST /projects/:id/respond-remix
+router.post("/:id/respond-remix", auth, async (req, res) => {
+  try {
+    const { requestId, action } = req.body;
+    if (!["approve", "reject"].includes(action))
+      return res.status(400).json({ message: "Invalid action" });
+
+    const project = await Project.findById(req.params.id);
+    if (!project) return res.status(404).json({ message: "Not found" });
+
+    if (project.userId.toString() !== req.user.id)
+      return res.status(403).json({ message: "Not authorized" });
+
+    const reqItem = project.remixRequests?.id(requestId);
+    if (!reqItem || reqItem.status !== "pending")
+      return res.status(400).json({ message: "Invalid or already handled request" });
+
+    reqItem.status = action === "approve" ? "approved" : "declined";
+
+    if (action === "approve") {
+      if (!Array.isArray(project.allowedRemixers)) project.allowedRemixers = [];
+      if (!project.allowedRemixers.includes(reqItem.userId)) {
+        project.allowedRemixers.push(reqItem.userId);
+      }
+    }
+
+    await project.save();
+    res.json({ message: `Request ${action}d successfully` });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 // POST /projects/:id/req-access
 router.post("/:id/req-access", auth, async (req, res) => {
   try {
@@ -486,6 +576,35 @@ router.post("/:id/req-access/:reqId/respond", auth, async (req, res) => {
       if (!project.allowedRemixers.includes(reqItem.userId)) {
         project.allowedRemixers.push(reqItem.userId);
       }
+
+      // Automatically create a Remix sandbox / Workspace
+      const User = require("../models/User");
+      const user = await User.findById(reqItem.userId);
+      const generatedBranchName = `${user ? user.username : 'user'}_feature`;
+
+      const remixed = await Project.create({
+        title: `${project.title} (Remix)`,
+        description: project.description,
+        codeSnippet: project.codeSnippet,
+        tags: project.tags,
+        domain: project.domain,
+        status: "in-progress",
+        about: project.about,
+        files: project.files,
+        userId: reqItem.userId,
+        remixedFrom: project._id
+      });
+      project.remixCount = (project.remixCount || 0) + 1;
+
+      // Automatically generate branch linking them
+      await Branch.create({
+        branchName: generatedBranchName,
+        sourceProjectId: project._id,
+        remixProjectId: remixed._id,
+        branchOwner: reqItem.userId,
+        visibility: "private",
+        status: "active"
+      });
     }
 
     await project.save();
@@ -591,6 +710,53 @@ router.put("/:id/files/:fileIndex/content", auth, async (req, res) => {
 });
 
 // ── Generic /:id routes LAST ──
+
+// GET /projects/:id/branches
+router.get("/:id/branches", async (req, res) => {
+  try {
+    const originalProject = await Project.findById(req.params.id);
+    if (!originalProject) return res.status(404).json({ message: "Project not found" });
+
+    // Identify user role (Optional Auth)
+    let userId = null;
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      try {
+        const token = authHeader.split(" ")[1];
+        const SECRET = process.env.JWT_SECRET || "vibegit_secret";
+        const jwt = require("jsonwebtoken");
+        const decoded = jwt.verify(token, SECRET);
+        userId = decoded.id; // decoded structure depends on auth.js, usually { id: "..." }
+      } catch (err) {
+         // Proceed as unauthenticated
+      }
+    }
+
+    const isOwner = originalProject.userId.toString() === userId;
+
+    let query = { sourceProjectId: originalProject._id };
+
+    if (!isOwner) {
+      if (userId) {
+        // Logged-in user, not owner: can see public branches + their own private branch
+        query.$or = [
+          { visibility: "public" },
+          { branchOwner: userId }
+        ];
+      } else {
+        // Unauthenticated user: can only see public branches
+        query.visibility = "public";
+      }
+    }
+
+    const branches = await Branch.find(query)
+      .populate("branchOwner", "username avatar");
+      
+    res.json(branches);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
 
 // GET /projects/:id
 router.get("/:id", async (req, res) => {
