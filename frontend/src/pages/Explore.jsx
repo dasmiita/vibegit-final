@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { useLocation, useNavigate, Link } from "react-router-dom";
 import api from "../api/axios";
 import Avatar from "../components/Avatar";
+import NightSky from "../components/NightSky";
+import { useTheme } from "../context/ThemeContext";
 import "./Explore.css";
 
 const TAGS = ["AI", "Web", "Mobile", "Fun", "Design", "Game", "Tool", "Other"];
@@ -12,6 +14,8 @@ export default function Explore() {
   const [profiles, setProfiles] = useState([]);
   const [loading, setLoading] = useState(true);
   
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -30,7 +34,6 @@ export default function Explore() {
         const query = new URLSearchParams();
         if (search) query.set("search", search);
         if (tag) query.set("tag", tag);
-        query.set("explore", "true"); // Filter for admin-owned projects
         const res = await api.get(`/projects?${query.toString()}`);
         setProjects(res.data);
       } else {
@@ -65,6 +68,7 @@ export default function Explore() {
 
   return (
     <div className="explore-page">
+      <NightSky />
       {/* Hero Section */}
       <div className="ex-hero">
         <div className="ex-hero-content">
@@ -77,10 +81,14 @@ export default function Explore() {
         </div>
 
         {/* Tab Switcher */}
-        <div className="ex-tab-switcher">
-          <button 
+        <div
+          className="ex-tab-switcher"
+          style={isDark ? { background: "#27272a", border: "1px solid #52525b", boxShadow: "0 2px 16px rgba(0,0,0,0.8)" } : {}}
+        >
+          <button
             className={`ex-tab ${activeTab === "projects" ? "active" : ""}`}
             onClick={() => setActiveTab("projects")}
+            style={activeTab !== "projects" && isDark ? { color: "#e4e4e7", background: "transparent" } : {}}
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 15, height: 15 }}>
               <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
@@ -89,9 +97,10 @@ export default function Explore() {
             Projects
             {projects.length > 0 && activeTab === "projects" && <span className="ex-tab-pill">{projects.length}</span>}
           </button>
-          <button 
+          <button
             className={`ex-tab ${activeTab === "profiles" ? "active" : ""}`}
             onClick={() => setActiveTab("profiles")}
+            style={activeTab !== "profiles" && isDark ? { color: "#e4e4e7", background: "transparent" } : {}}
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 15, height: 15 }}>
               <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
@@ -171,7 +180,6 @@ function ProjectCardSmall({ project, onLike }) {
 
   return (
     <div className="ex-proj-card" onClick={() => navigate(`/projects/${project._id}`)}>
-      <div className="ex-proj-accent-bar" style={{ background: "var(--accent)" }} />
       
       <div className="ex-proj-header">
         <Link to={`/profile/${project.userId?._id}`} className="ex-proj-author" onClick={e => e.stopPropagation()}>
@@ -213,7 +221,7 @@ function ProjectCardSmall({ project, onLike }) {
         </div>
       </div>
       
-      <div className="ex-proj-hover-cta">View Details →</div>
+      <div className="ex-proj-hover-cta" style={{ display: "none" }} />
     </div>
   );
 }

@@ -13,6 +13,7 @@ export function ThemeProvider({ children }) {
   const [accent, setAccent] = useState(() => localStorage.getItem("accent") || "#a78bfa");
   const [font, setFont] = useState(() => localStorage.getItem("font") || "inter");
   const [layout, setLayout] = useState(() => localStorage.getItem("layout") || "grid");
+  const [oceanMode, setOceanMode] = useState(false);
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
@@ -20,7 +21,6 @@ export function ThemeProvider({ children }) {
   }, [theme]);
 
   useEffect(() => {
-    // Derive a slightly darker hover shade from accent
     document.documentElement.style.setProperty("--accent", accent);
     document.documentElement.style.setProperty("--accent-hover", accent + "cc");
     document.documentElement.style.setProperty("--border-hover", accent);
@@ -33,14 +33,17 @@ export function ThemeProvider({ children }) {
     localStorage.setItem("font", font);
   }, [font]);
 
-  useEffect(() => {
-    localStorage.setItem("layout", layout);
-  }, [layout]);
+  useEffect(() => { localStorage.setItem("layout", layout); }, [layout]);
 
   const toggle = () => setTheme(t => t === "dark" ? "light" : "dark");
 
+  const toggleOcean = () => {
+    setOceanMode(o => !o);
+    if (!oceanMode) setAccent("#38bdf8");
+  };
+
   return (
-    <ThemeContext.Provider value={{ theme, toggle, accent, setAccent, font, setFont, layout, setLayout }}>
+    <ThemeContext.Provider value={{ theme, toggle, accent, setAccent, font, setFont, layout, setLayout, oceanMode, toggleOcean }}>
       {children}
     </ThemeContext.Provider>
   );

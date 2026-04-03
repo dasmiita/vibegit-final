@@ -3,24 +3,18 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
 import Avatar from "./Avatar";
+import PullSwitch from "./PullSwitch";
+import OceanTap from "./OceanTap";
 import "./Navbar.css";
-
-const ACCENTS = ["#a78bfa", "#f472b6", "#34d399", "#60a5fa", "#fb923c", "#facc15"];
-const FONTS = [
-  { key: "inter", label: "Sans" },
-  { key: "mono",  label: "Mono" },
-  { key: "serif", label: "Serif" }
-];
 
 export default function Navbar({ setChatOpen }) {
   const { user, logout } = useAuth();
-  const { theme, toggle, accent, setAccent, font, setFont, layout, setLayout } = useTheme();
+  const { accent, oceanMode, toggleOcean } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
   const [search, setSearch] = useState("");
   const [results, setResults] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [showPrefs, setShowPrefs] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [notifications, setNotifications] = useState([]);
@@ -33,37 +27,25 @@ export default function Navbar({ setChatOpen }) {
     if (!user) return;
     const fetchUnread = () => {
       import("../api/axios").then(m => m.default.get("/messages/unread/count"))
-        .then(res => setUnreadCount(res.data.count))
-        .catch(() => {});
+        .then(res => setUnreadCount(res.data.count)).catch(() => {});
     };
     const fetchNotifications = () => {
       import("../api/axios").then(m => m.default.get("/notifications"))
         .then(res => {
           setNotifications(res.data);
-          const unreadCount = res.data.filter(n => !n.isRead).length;
-          setNotifUnread(unreadCount > 0 ? unreadCount : false);
-        })
-        .catch(() => {});
+          const count = res.data.filter(n => !n.isRead).length;
+          setNotifUnread(count > 0 ? count : false);
+        }).catch(() => {});
     };
-
-    fetchUnread();
-    fetchNotifications();
-    const interval = setInterval(() => {
-      fetchUnread();
-      fetchNotifications();
-    }, 15000); 
-    
+    fetchUnread(); fetchNotifications();
+    const interval = setInterval(() => { fetchUnread(); fetchNotifications(); }, 15000);
     window.addEventListener("vibe:unread-update", fetchUnread);
-    return () => {
-      clearInterval(interval);
-      window.removeEventListener("vibe:unread-update", fetchUnread);
-    }
+    return () => { clearInterval(interval); window.removeEventListener("vibe:unread-update", fetchUnread); };
   }, [user]);
 
   const markAsRead = () => {
     import("../api/axios").then(m => m.default.post("/notifications/read"))
-      .then(() => setNotifUnread(false))
-      .catch(() => {});
+      .then(() => setNotifUnread(false)).catch(() => {});
   };
 
   useEffect(() => {
@@ -71,37 +53,26 @@ export default function Navbar({ setChatOpen }) {
       if (search.trim().length > 1) {
         setLoading(true);
         import("../api/axios").then(m => m.default.get(`/users/search?q=${encodeURIComponent(search.trim())}`))
-          .then(res => {
-            setResults(res.data);
-            setShowDropdown(true);
-          })
-          .catch(() => {})
-          .finally(() => setLoading(false));
-      } else {
-        setResults(null);
-        setShowDropdown(false);
-      }
+          .then(res => { setResults(res.data); setShowDropdown(true); })
+          .catch(() => {}).finally(() => setLoading(false));
+      } else { setResults(null); setShowDropdown(false); }
     }, 350);
     return () => clearTimeout(timer);
   }, [search]);
 
   const handleSearch = (e) => {
     e.preventDefault();
-    if (search.trim()) {
-      setShowDropdown(false);
-      navigate(`/search?q=${encodeURIComponent(search.trim())}`);
-    }
+    if (search.trim()) { setShowDropdown(false); navigate(`/search?q=${encodeURIComponent(search.trim())}`); }
   };
 
-  const handleLogout = () => {
-    logout();
-    navigate("/login");
-  };
+  const handleLogout = () => { logout(); navigate("/login"); };
 
   return (
     <nav className="navbar">
       <Link to="/" className="navbar-logo">
-        <span>VibeGit</span>
+        <span className="navbar-logo-text" style={{ backgroundImage: `linear-gradient(135deg, ${accent}, ${accent}bb)` }}>
+          VibeGit
+        </span>
       </Link>
 
       <div className="navbar-search-container">
@@ -145,9 +116,7 @@ export default function Navbar({ setChatOpen }) {
             {!loading && results.users?.length === 0 && results.projects?.length === 0 && (
               <p className="dropdown-empty">No results found</p>
             )}
-            <button className="dropdown-footer" onClick={handleSearch}>
-              View all results for "{search}"
-            </button>
+            <button className="dropdown-footer" onClick={handleSearch}>View all results for "{search}"</button>
           </div>
         )}
       </div>
@@ -156,63 +125,34 @@ export default function Navbar({ setChatOpen }) {
         <Link to="/" className={isActive("/")}>Explore</Link>
         <Link to="/feed" className={isActive("/feed")}>Feed</Link>
         <Link to="/activity" className={isActive("/activity")}>Activity</Link>
-        
+
         {user && (
           <div className="nav-notif-wrapper" style={{ position: "relative" }}>
-            <button 
-              className="nav-msg-btn" 
-              onClick={() => { 
-                if (!showNotifications) markAsRead();
-                setShowNotifications(!showNotifications); 
-              }} 
-              title="Notifications"
-            >
+            <button className="nav-msg-btn" onClick={() => { if (!showNotifications) markAsRead(); setShowNotifications(!showNotifications); }} title="Notifications">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="nav-msg-icon">
                 <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
                 <path d="M13.73 21a2 2 0 0 1-3.46 0" />
               </svg>
-              {notifUnread && <span className="nav-msg-badge" style={{ 
-                background: "#ef4444", 
-                width: "auto", 
-                minWidth: "16px", 
-                height: "16px", 
-                borderRadius: "10px", 
-                padding: "0 4px", 
-                fontSize: "0.65rem", 
-                display: "flex", 
-                alignItems: "center", 
-                justifyContent: "center" 
-              }}>{notifUnread}</span>}
+              {notifUnread && <span className="nav-msg-badge" style={{ background:"#ef4444", width:"auto", minWidth:"16px", height:"16px", borderRadius:"10px", padding:"0 4px", fontSize:"0.65rem", display:"flex", alignItems:"center", justifyContent:"center" }}>{notifUnread}</span>}
             </button>
-            
             {showNotifications && (
-              <div className="notif-dropdown" style={{
-                position: "absolute", top: "100%", right: 0, width: "300px", background: "var(--bg-card)", 
-                border: "1px solid var(--border)", borderRadius: "12px", marginTop: "10px", 
-                boxShadow: "0 10px 25px rgba(0,0,0,0.5)", zIndex: 1000, overflow: "hidden"
-              }}>
-                <div style={{ padding: "12px 16px", borderBottom: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ fontWeight: "bold", fontSize: "0.9rem" }}>Notifications</span>
+              <div style={{ position:"absolute", top:"100%", right:0, width:"300px", background:"var(--bg-card)", border:"1px solid var(--border)", borderRadius:"12px", marginTop:"10px", boxShadow:"0 10px 25px rgba(0,0,0,0.5)", zIndex:1000, overflow:"hidden" }}>
+                <div style={{ padding:"12px 16px", borderBottom:"1px solid var(--border)", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                  <span style={{ fontWeight:"bold", fontSize:"0.9rem" }}>Notifications</span>
                 </div>
-                <div style={{ maxHeight: "350px", overflowY: "auto" }}>
+                <div style={{ maxHeight:"350px", overflowY:"auto" }}>
                   {notifications.length === 0 ? (
-                    <div style={{ padding: "30px 20px", textAlign: "center", color: "#666", fontSize: "0.85rem" }}>
-                      No notifications yet
+                    <div style={{ padding:"30px 20px", textAlign:"center", color:"#666", fontSize:"0.85rem" }}>No notifications yet</div>
+                  ) : notifications.map(n => (
+                    <div key={n._id} style={{ padding:"12px 16px", borderBottom:"1px solid rgba(255,255,255,0.05)", background:n.isRead?"transparent":"rgba(59,130,246,0.05)", cursor:"pointer", transition:"background 0.2s" }}
+                      onMouseEnter={e => e.currentTarget.style.background="rgba(255,255,255,0.03)"}
+                      onMouseLeave={e => e.currentTarget.style.background=n.isRead?"transparent":"rgba(59,130,246,0.05)"}>
+                      <p style={{ margin:0, fontSize:"0.82rem", color:"#ddd", lineHeight:"1.4" }}>{n.message}</p>
+                      <span style={{ fontSize:"0.7rem", color:"#666" }}>{new Date(n.createdAt).toLocaleDateString()}</span>
                     </div>
-                  ) : (
-                    notifications.map(n => (
-                      <div key={n._id} style={{ 
-                        padding: "12px 16px", borderBottom: "1px solid rgba(255,255,255,0.05)", 
-                        background: n.isRead ? "transparent" : "rgba(59,130,246,0.05)",
-                        cursor: "pointer", transition: "background 0.2s"
-                      }} onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.03)"} onMouseLeave={e => e.currentTarget.style.background = n.isRead ? "transparent" : "rgba(59,130,246,0.05)"}>
-                        <p style={{ margin: 0, fontSize: "0.82rem", color: "#ddd", lineHeight: "1.4" }}>{n.message}</p>
-                        <span style={{ fontSize: "0.7rem", color: "#666" }}>{new Date(n.createdAt).toLocaleDateString()}</span>
-                      </div>
-                    ))
-                  )}
+                  ))}
                 </div>
-                <Link to="/activity" style={{ display: "block", textAlign: "center", padding: "10px", fontSize: "0.75rem", color: "var(--accent)", textDecoration: "none", background: "rgba(255,255,255,0.02)" }} onClick={() => setShowNotifications(false)}>
+                <Link to="/activity" style={{ display:"block", textAlign:"center", padding:"10px", fontSize:"0.75rem", color:"var(--accent)", textDecoration:"none", background:"rgba(255,255,255,0.02)" }} onClick={() => setShowNotifications(false)}>
                   View all activity
                 </Link>
               </div>
@@ -244,67 +184,8 @@ export default function Navbar({ setChatOpen }) {
           <Link to="/login" className="nav-create-btn">Sign in</Link>
         )}
 
-        <div className="prefs-wrapper">
-          <button
-            className="nav-btn"
-            onClick={() => setShowPrefs(p => !p)}
-            title="Preferences"
-            style={{ fontSize: "1rem", padding: "0.35rem 0.5rem" }}
-          >
-            {theme === "dark" ? "🌙" : "☀️"}
-          </button>
-          {showPrefs && (
-            <div className="prefs-panel">
-              <div className="prefs-row">
-                <span>Theme</span>
-                <button className="nav-btn" onClick={toggle}>
-                  {theme === "dark" ? "☀️ Light" : "🌙 Dark"}
-                </button>
-              </div>
-              <div className="prefs-row">
-                <span>Accent</span>
-                <div className="accent-swatches">
-                  {ACCENTS.map(c => (
-                    <button
-                      key={c}
-                      className={`swatch ${accent === c ? "active" : ""}`}
-                      style={{ background: c }}
-                      onClick={() => setAccent(c)}
-                    />
-                  ))}
-                  <input
-                    type="color"
-                    value={accent}
-                    onChange={e => setAccent(e.target.value)}
-                    className="color-input"
-                    title="Custom color"
-                  />
-                </div>
-              </div>
-              <div className="prefs-row">
-                <span>Font</span>
-                <div className="font-btns">
-                  {FONTS.map(f => (
-                    <button
-                      key={f.key}
-                      className={`nav-btn ${font === f.key ? "active-pref" : ""}`}
-                      onClick={() => setFont(f.key)}
-                    >
-                      {f.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div className="prefs-row">
-                <span>Layout</span>
-                <div className="font-btns">
-                  <button className={`nav-btn ${layout === "grid" ? "active-pref" : ""}`} onClick={() => setLayout("grid")}>⊞ Grid</button>
-                  <button className={`nav-btn ${layout === "list" ? "active-pref" : ""}`} onClick={() => setLayout("list")}>☰ List</button>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
+        <PullSwitch inline />
+        <OceanTap active={oceanMode} onToggle={toggleOcean} />
       </div>
     </nav>
   );

@@ -1,17 +1,25 @@
+@import url('https://api.fontshare.com/v2/css?f[]=satoshi@700,800&display=swap');
+
 .feed-page {
   max-width: 620px;
   margin: 0 auto;
   padding: 2rem 1.5rem;
+  position: relative;
+  z-index: 1;
 }
 
 .feed-page .page-title {
-  font-size: 1.1rem;
-  color: var(--text-muted);
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  font-family: 'Satoshi', sans-serif;
+  font-size: 2.6rem;
+  font-weight: 800;
+  color: var(--text);
+  letter-spacing: -0.04em;
+  line-height: 1.1;
   margin-bottom: 1.5rem;
+  text-transform: none;
 }
+
+[data-theme="dark"] .feed-page .page-title { color: #f4f4f5; }
 
 .feed-list {
   display: flex;

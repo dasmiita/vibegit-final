@@ -1,8 +1,12 @@
+@import url('https://api.fontshare.com/v2/css?f[]=satoshi@700,800&display=swap');
+
 /* ── Page ── */
 .explore-page {
   max-width: 1080px;
   margin: 0 auto;
   padding: 2rem 1.5rem 4rem;
+  position: relative;
+  z-index: 1;
 }
 
 /* ── Hero ── */
@@ -16,20 +20,25 @@
 }
 
 .ex-hero-title {
-  font-size: 2rem;
+  font-family: 'Satoshi', sans-serif;
+  font-size: 2.6rem;
   font-weight: 800;
   color: var(--text);
-  letter-spacing: -0.03em;
+  letter-spacing: -0.04em;
   margin: 0 0 0.3rem;
-  line-height: 1.15;
+  line-height: 1.1;
 }
+
+[data-theme="dark"] .ex-hero-title { color: #f4f4f5; }
 
 .ex-hero-title em {
   font-style: normal;
+  font-weight: 800;
   background: linear-gradient(90deg, var(--accent), var(--like));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+  letter-spacing: -0.05em;
 }
 
 .ex-hero-sub {
@@ -38,14 +47,17 @@
   margin: 0;
 }
 
+[data-theme="dark"] .ex-hero-sub { color: #71717a; }
+
 /* ── Tab switcher ── */
 .ex-tab-switcher {
   display: flex;
   gap: 0.35rem;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border-soft);
+  background: #ffffff;
+  border: 1px solid #e4e4e7;
   border-radius: 12px;
   padding: 4px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
 
 .ex-tab {
@@ -56,7 +68,7 @@
   border: none;
   border-radius: 9px;
   background: transparent;
-  color: var(--text-muted);
+  color: #71717a;
   font-size: 0.85rem;
   font-weight: 600;
   font-family: var(--font);
@@ -65,16 +77,15 @@
 }
 
 .ex-tab svg { width: 15px; height: 15px; opacity: 0.7; }
-
-.ex-tab:hover { color: var(--text); background: rgba(255,255,255,0.04); }
+.ex-tab:hover { color: #18181b; background: rgba(0,0,0,0.05); }
 
 .ex-tab.active {
-  background: var(--bg-card);
-  color: var(--text);
-  box-shadow: 0 1px 6px rgba(0,0,0,0.3);
+  background: var(--accent);
+  color: #fff !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
 }
 
-.ex-tab.active svg { opacity: 1; color: var(--accent); }
+.ex-tab.active svg { opacity: 1; color: #fff; }
 
 .ex-tab-pill {
   background: var(--accent-dim);
@@ -128,7 +139,7 @@
 .ex-proj-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 1rem;
+  gap: 4px;
 }
 
 @media (max-width: 900px) { .ex-proj-grid { grid-template-columns: repeat(2, 1fr); } }
@@ -138,21 +149,26 @@
 .ex-proj-card {
   position: relative;
   background: var(--bg-card);
-  border: 1px solid var(--border-soft);
-  border-radius: 14px;
+  border: none;
+  border-radius: 0;
   padding: 1.1rem 1.15rem 1rem;
   display: flex;
   flex-direction: column;
   gap: 0.6rem;
   cursor: pointer;
   overflow: hidden;
-  transition: transform 0.22s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.22s, border-color 0.18s;
+  transition: transform 0.22s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.22s;
+}
+
+[data-theme="dark"] .ex-proj-card {
+  background: rgba(24,24,27,0.55);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
 .ex-proj-card:hover {
   transform: translateY(-5px);
   box-shadow: 0 12px 32px rgba(0,0,0,0.45);
-  border-color: var(--border);
 }
 
 /* Accent top bar */

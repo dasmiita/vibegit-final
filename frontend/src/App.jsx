@@ -1,9 +1,11 @@
 import { useState, useEffect } from "react";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
-import { ThemeProvider } from "./context/ThemeContext";
+import { ThemeProvider, useTheme } from "./context/ThemeContext";
 import Navbar from "./components/Navbar";
 import ChatModal from "./components/ChatModal";
+import NightSky from "./components/NightSky";
+import OceanBackground from "./components/OceanBackground";
 import Explore from "./pages/Explore";
 import Feed from "./pages/Feed";
 import Create from "./pages/Create";
@@ -17,11 +19,22 @@ import SyncRequests from "./pages/SyncRequests";
 import Search from "./pages/Search";
 import ProjectIDE from "./pages/ProjectIDE";
 
+function NightSkyGlobal() {
+  const location = useLocation();
+  const { oceanMode } = useTheme();
+  if (location.pathname === "/login") return null;
+  return (
+    <>
+      {!oceanMode && <NightSky />}
+      <OceanBackground active={oceanMode} />
+    </>
+  );
+}
+
 function AppInner() {
   const { user } = useAuth();
   const [chatOpen, setChatOpen] = useState(false);
 
-  // Listen for global chat open events
   useEffect(() => {
     const handleOpenChat = (e) => {
       const { userId, user: userData } = e.detail || {};
@@ -34,6 +47,7 @@ function AppInner() {
 
   return (
     <BrowserRouter>
+      <NightSkyGlobal />
       <Navbar setChatOpen={setChatOpen} />
       <Routes>
         <Route path="/" element={<Explore />} />
@@ -50,7 +64,6 @@ function AppInner() {
         <Route path="/search" element={<Search />} />
       </Routes>
 
-      {/* Global floating chat button */}
       {user && (
         <button className="chat-fab" onClick={() => setChatOpen(true)} title="Messages">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
