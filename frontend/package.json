@@ -10,7 +10,6 @@
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.22.0",
     "react-scripts": "5.0.1",
-    "typescript": "^4.9.5",
     "yaml": "^2.8.3"
   },
   "scripts": {
@@ -26,5 +25,8 @@
     "development": [
       "last 1 chrome version"
     ]
+  },
+  "devDependencies": {
+    "typescript": "^4.9.5"
   }
 }
