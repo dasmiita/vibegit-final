@@ -11,7 +11,7 @@ import AdminSyncRequests from "../components/AdminSyncRequests";
 import ContributorChanges from "../components/ContributorChanges";
 import "./ProjectDetail.css";
 
-const BASE = "$env:REACT_APP_BASE_URL/uploads/";
+const BASE = (process.env.REACT_APP_API_URL || "http://localhost:5000") + "/uploads/";
 const IMAGE_EXTS = ["jpg", "jpeg", "png", "gif", "webp", "svg"];
 const CODE_EXTS  = ["js", "jsx", "ts", "tsx", "py", "html", "css", "json", "md", "txt", "sh", "java", "c", "cpp", "go", "rs"];
 
