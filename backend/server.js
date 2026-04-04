@@ -21,6 +21,13 @@ app.use("/branches", require("./routes/branchRoutes"));
 
 app.get("/", (req, res) => res.send("API Running 🚀"));
 
+// Keep Render free tier awake
+const https = require("https");
+setInterval(() => {
+  const url = process.env.RENDER_EXTERNAL_URL;
+  if (url) https.get(url).on("error", () => {});
+}, 14 * 60 * 1000);
+
 mongoose.connect(process.env.MONGODB_URI, { family: 4 })
 
 .then(() => {
