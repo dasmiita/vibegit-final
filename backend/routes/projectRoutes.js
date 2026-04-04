@@ -1016,11 +1016,9 @@ router.get("/:id/notifications", auth, checkProjectOwner, async (req, res) => {
   }
 });
 
-module.exports = router;
 
-
-// Download project as ZIP
-router.get("/:id/zip-download", async (req, res) => {
+// GET /projects/:id/download
+router.get("/:id/download", async (req, res) => {
   try {
     const project = await Project.findById(req.params.id);
     if (!project) return res.status(404).json({ message: "Project not found" });
@@ -1043,8 +1041,8 @@ router.get("/:id/zip-download", async (req, res) => {
     res.set("Content-Disposition", `attachment; filename="${zipName}"`);
     res.send(zipBuffer);
   } catch (err) {
-    console.error(err);
     res.status(500).json({ message: "Failed to generate ZIP" });
   }
 });
 
+module.exports = router;
