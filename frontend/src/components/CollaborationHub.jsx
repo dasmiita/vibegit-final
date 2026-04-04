@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import "./CollaborationHub.css";
 
-const CollaborationHub = ({ project, user, onPull, onPush, isOwner, syncSending, syncRequestSent }) => {
+const CollaborationHub = ({ project, user, onPull, onPush, isOwner, isContributor, syncSending, syncRequestSent }) => {
   const [terminalOutput, setTerminalOutput] = useState([
     "✔ Connected to upstream",
     "Ready for secure collaboration operations."
