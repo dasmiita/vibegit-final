@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { useLocation, useNavigate, Link } from "react-router-dom";
 import api from "../api/axios";
 import Avatar from "../components/Avatar";
-import NightSky from "../components/NightSky";
 import { useTheme } from "../context/ThemeContext";
 import "./Explore.css";
 
@@ -68,7 +67,6 @@ export default function Explore() {
 
   return (
     <div className="explore-page">
-      <NightSky />
       {/* Hero Section */}
       <div className="ex-hero">
         <div className="ex-hero-content">
