@@ -1018,3 +1018,32 @@ router.get("/:id/notifications", auth, checkProjectOwner, async (req, res) => {
 
 module.exports = router;
 
+
+// Download project as ZIP
+router.get("/:id/download", async (req, res) => {
+  try {
+    const project = await Project.findById(req.params.id);
+    if (!project) return res.status(404).json({ message: "Project not found" });
+
+    const zip = new AdmZip();
+    const uploadsDir = path.join(__dirname, "../uploads");
+
+    if (project.files && project.files.length > 0) {
+      for (const file of project.files) {
+        const filePath = path.join(uploadsDir, file.path);
+        if (fs.existsSync(filePath)) {
+          zip.addLocalFile(filePath, "", file.name);
+        }
+      }
+    }
+
+    const zipBuffer = zip.toBuffer();
+    const zipName = `${project.title.replace(/[^a-z0-9]/gi, "_")}.zip`;
+    res.set("Content-Type", "application/zip");
+    res.set("Content-Disposition", `attachment; filename="${zipName}"`);
+    res.send(zipBuffer);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to generate ZIP" });
+  }
+});
