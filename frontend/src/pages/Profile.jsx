@@ -25,6 +25,7 @@ export default function Profile({ openChat }) {
   const [localLayout, setLocalLayout] = useState(layout);
   const [activeTab, setActiveTab] = useState("projects"); // "projects" or "drafts"
   const [draft, setDraft] = useState(null);
+  const [followModal, setFollowModal] = useState({ open: false, type: "", list: [] });
 
   useEffect(() => {
     // Check for draft if it's own profile
@@ -52,6 +53,13 @@ export default function Profile({ openChat }) {
   };
 
   const handleDelete = (deletedId) => setProjects(prev => prev.filter(p => p._id !== deletedId));
+
+  const openFollowModal = async (type) => {
+    const res = await api.get(`/users/${id}`);
+    const ids = type === "followers" ? res.data.followers : res.data.following;
+    const users = await Promise.all((ids || []).map(uid => api.get(`/users/${uid}`).then(r => r.data).catch(() => null)));
+    setFollowModal({ open: true, type, list: users.filter(Boolean) });
+  };
 
   if (loading) return <p className="loading">Loading profile...</p>;
   if (!profile) return <p className="loading">User not found.</p>;
@@ -93,8 +101,8 @@ export default function Profile({ openChat }) {
 
           <div className="profile-stats">
             <div className="stat"><strong>{profile.projectCount}</strong><span>projects</span></div>
-            <div className="stat"><strong>{followerCount}</strong><span>followers</span></div>
-            <div className="stat"><strong>{profile.following?.length || 0}</strong><span>following</span></div>
+            <button className="stat stat-btn" onClick={() => openFollowModal("followers")}><strong>{followerCount}</strong><span>followers</span></button>
+            <button className="stat stat-btn" onClick={() => openFollowModal("following")}><strong>{profile.following?.length || 0}</strong><span>following</span></button>
           </div>
 
           {profile.bio && <p className="profile-bio">{profile.bio}</p>}
@@ -188,6 +196,26 @@ export default function Profile({ openChat }) {
               <Link to="/create" className="edit-draft-btn">Continue Editing</Link>
             </div>
           )}
+        </div>
+      )}
+      {followModal.open && (
+        <div className="follow-modal-overlay" onClick={() => setFollowModal({ open: false, type: "", list: [] })}>
+          <div className="follow-modal" onClick={e => e.stopPropagation()}>
+            <div className="follow-modal-header">
+              <h3>{followModal.type === "followers" ? "Followers" : "Following"}</h3>
+              <button className="follow-modal-close" onClick={() => setFollowModal({ open: false, type: "", list: [] })}>✕</button>
+            </div>
+            <div className="follow-modal-list">
+              {followModal.list.length === 0 ? (
+                <p className="follow-modal-empty">No {followModal.type} yet.</p>
+              ) : followModal.list.map(u => (
+                <Link key={u._id} to={`/profile/${u._id}`} className="follow-modal-user" onClick={() => setFollowModal({ open: false, type: "", list: [] })}>
+                  <Avatar user={u} size={40} />
+                  <span className="follow-modal-username">@{u.username}</span>
+                </Link>
+              ))}
+            </div>
+          </div>
         </div>
       )}
     </div>
