@@ -7,7 +7,7 @@ import ProjectCard from "../components/ProjectCard";
 import Avatar from "../components/Avatar";
 import "./Profile.css";
 
-const AVATAR_BASE = "http://localhost:5000/uploads/";
+const AVATAR_BASE = "$env:REACT_APP_BASE_URL/uploads/";
 
 function vibeScore(projectCount, followerCount, totalLikes) {
   return Math.min(100, Math.floor(projectCount * 5 + followerCount * 3 + totalLikes * 1));

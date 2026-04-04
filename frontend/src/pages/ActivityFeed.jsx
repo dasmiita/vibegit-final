@@ -4,7 +4,7 @@ import api from "../api/axios";
 import Avatar from "../components/Avatar";
 import "./ActivityFeed.css";
 
-const BASE = "http://localhost:5000/uploads/";
+const BASE = "$env:REACT_APP_BASE_URL/uploads/";
 
 const ACTION_TEXT = {
   created:        (a) => <>created a new project <ProjectLink a={a} /></>,

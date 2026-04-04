@@ -38,8 +38,10 @@ export function ThemeProvider({ children }) {
   const toggle = () => setTheme(t => t === "dark" ? "light" : "dark");
 
   const toggleOcean = () => {
-    setOceanMode(o => !o);
-    if (!oceanMode) setAccent("#38bdf8");
+    setOceanMode(prev => {
+      if (!prev) setAccent("#38bdf8");
+      return !prev;
+    });
   };
 
   return (

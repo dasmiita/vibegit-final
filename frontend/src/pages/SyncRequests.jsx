@@ -4,7 +4,7 @@ import api from "../api/axios";
 import { useAuth } from "../context/AuthContext";
 import "./SyncRequests.css";
 
-const BASE = "http://localhost:5000/uploads/";
+const BASE = "$env:REACT_APP_BASE_URL/uploads/";
 
 export default function SyncRequests() {
   const { id } = useParams();

@@ -6,13 +6,13 @@ import ProjectCard from "../components/ProjectCard";
 import "./Search.css";
 
 function Avatar({ user, size = 32 }) {
-  const url = user?.avatar ? `http://localhost:5000/uploads/${user.avatar}` : null;
+  const url = user?.avatar ? `$env:REACT_APP_BASE_URL/uploads/${user.avatar}` : null;
   const letter = (user?.username || "?")[0].toUpperCase();
   if (url) return <img src={url} alt="" className="sr-avatar-img" style={{ width: size, height: size }} />;
   return <div className="sr-avatar-placeholder" style={{ width: size, height: size, fontSize: size * 0.4 }}>{letter}</div>;
 }
 
-const AVATAR_BASE = "http://localhost:5000/uploads/";
+const AVATAR_BASE = "$env:REACT_APP_BASE_URL/uploads/";
 
 export default function Search() {
   const location = useLocation();

@@ -83,12 +83,18 @@ export default function Explore() {
         {/* Tab Switcher */}
         <div
           className="ex-tab-switcher"
-          style={isDark ? { background: "#27272a", border: "1px solid #52525b", boxShadow: "0 2px 16px rgba(0,0,0,0.8)" } : {}}
+          style={{
+            background: isDark ? "#27272a" : "#ffffff",
+            border: isDark ? "1px solid #52525b" : "1px solid #e4e4e7",
+            boxShadow: isDark ? "0 2px 16px rgba(0,0,0,0.9)" : "0 2px 8px rgba(0,0,0,0.1)",
+            position: "relative",
+            zIndex: 10,
+          }}
         >
           <button
             className={`ex-tab ${activeTab === "projects" ? "active" : ""}`}
             onClick={() => setActiveTab("projects")}
-            style={activeTab !== "projects" && isDark ? { color: "#e4e4e7", background: "transparent" } : {}}
+            style={{ color: activeTab === "projects" ? "#fff" : (isDark ? "#e4e4e7" : "#71717a"), background: activeTab === "projects" ? "var(--accent)" : "transparent" }}
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 15, height: 15 }}>
               <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
@@ -100,7 +106,7 @@ export default function Explore() {
           <button
             className={`ex-tab ${activeTab === "profiles" ? "active" : ""}`}
             onClick={() => setActiveTab("profiles")}
-            style={activeTab !== "profiles" && isDark ? { color: "#e4e4e7", background: "transparent" } : {}}
+            style={{ color: activeTab === "profiles" ? "#fff" : (isDark ? "#e4e4e7" : "#71717a"), background: activeTab === "profiles" ? "var(--accent)" : "transparent" }}
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 15, height: 15 }}>
               <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />

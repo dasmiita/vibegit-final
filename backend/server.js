@@ -21,9 +21,8 @@ app.use("/branches", require("./routes/branchRoutes"));
 
 app.get("/", (req, res) => res.send("API Running 🚀"));
 
-mongoose.connect("mongodb+srv://dasmiita:innu2013@vibegit.ksnhxcx.mongodb.net/vibegit", {
-  family: 4
-})
+mongoose.connect(process.env.MONGODB_URI, { family: 4 })
+
 .then(() => {
   console.log("MongoDB connected ✅");
   app.listen(5000, () => console.log("Server running on port 5000"));
